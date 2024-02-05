@@ -1,0 +1,54 @@
+<r-include name="" r-if="" r-tag="" />
+
+<r-include name="" r-if="" r-tag="">
+  <p r-add-to-slot="">Random Data</p>
+  <p r-replace-slot="">Random Data</p>
+</r-include>
+
+<div>
+  <r-set name="" value="" />
+  <r-unset name="" />
+  <r-var name="" value="" />
+  <r-value of="" />
+  <r-eval line="" />
+  <r-slot name="" />
+
+  <r-block for-every="">
+    <p>Hello <r-index />: <r-item /></p>
+    <p>
+      <r-eval>
+        index < item.pos + :offset - data.oops.map { $0 / 2 } #(hello)
+      </r-eval>
+    </p>
+  </r-block>
+
+  <r-block r-else-if=""></r-block>
+  <r-block r-else=""></r-block>
+</div>
+
+AttributeModifier:
+- set(name: String, value: String, condition: AST.condition?)
+- unset(name: String, condition: AST.condition?)
+
+ConditionType:
+- if
+- else if
+- else
+
+SlotCommandType:
+- add(name: String)
+- replace(name: String)
+
+AST:
+- constant(contents: String)
+- include(name: String, slots: [slotCommand])
+- slotDeclaration(name: String, defaults: AST)
+- slotCommand(type: SlotCommandType, value: AST) // Nested slot commands are ignored, maybe?
+- loop(forEvery: String, contents: AST)
+- condition(name: String?, check: String, type: ConditionType, contents: AST)
+- eval(line: String)
+- value(of: String)
+- var(name: String, line: String)
+- modifiers(applying: [AttributeModifier], node: String)
+- index
+- item

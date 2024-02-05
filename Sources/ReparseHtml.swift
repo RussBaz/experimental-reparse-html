@@ -12,6 +12,11 @@ struct PageDef {
     let name: [String]
 }
 
+struct RendererDef {
+    let path: String
+    let name: String
+}
+
 @main
 struct ReparseHtml: ParsableCommand {
     @Argument(help: "The target data folder location.", transform: URL.init(fileURLWithPath:))
@@ -24,7 +29,7 @@ struct ReparseHtml: ParsableCommand {
 
         let htmls = findAllFiles(in: [location.path])
 
-        let ast = AST.from(htmls)
+        let ast = OutNode.from(htmls)
 
         print(ast.build())
     }

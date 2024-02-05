@@ -1,104 +1,35 @@
-struct AST {
-    var children: [String: AST]
-    var pages: [(String, String)]
-}
+indirect enum AST {
+    case constant(contents: String)
+    case slotDeclaration(name: String)
+    case slotCommand(type: SlotCommandType, contents: AST)
+    case include(name: String, contents: AST)
+    case conditional(name: String?, check: String, type: ConditionType, contents: AST)
+    case loop(forEvery: String, name: String?, contents: AST)
+    case modifiers(applying: [AttributeModifier], node: String)
+    case eval(line: String)
+    case value(of: String)
+    case assignment(name: String, line: String)
+    case index
+    case item
 
-extension AST {
-    static func from(_ pages: [PageDef]) -> Self {
-        var root = AST(children: [:], pages: [])
-
-        for p in pages {
-            root.add(page: p)
-        }
-
-        return root
+    enum ConditionType {
+        case ifType
+        case elseIfType
+        case elseType
     }
 
-    mutating func add(page: PageDef) {
-        guard let fragmentName = page.name.last else { return }
-
-        if page.name.count == 1 {
-            pages.append((fragmentName, page.path))
-        } else {
-            var child = children[fragmentName] ?? AST(children: [:], pages: [])
-            child.add(page: .init(path: page.path, name: page.name.dropLast()))
-            children[fragmentName] = child
-        }
+    enum SlotCommandType {
+        case add(name: String)
+        case replace(name: String)
     }
 
-    func debugPrint(offset: Int = 0) {
-        for p in pages {
-            print("\(String(repeating: " ", count: offset * 2))Name: \(p.0), path: \(p.1)")
-        }
-
-        for c in children {
-            print("\(String(repeating: " ", count: offset * 2))Child: \(c.key)")
-            c.value.debugPrint(offset: offset + 1)
-        }
+    enum AttributeModifier {
+        case set(name: String, value: String, condition: AttributeCondition?)
     }
 
-    func build(name: String = "Pages", offset: Int = 0) -> String {
-        let header = """
-        \(String(repeating: " ", count: offset * 4))enum \(name.capitalized) {
-        """
-        let children = children.map { c in
-            c.value.build(name: c.key, offset: offset + 1)
-        }
-        .joined(separator: "\n\n")
-
-        let renderers = pages.map { p in
-            buildPageEnum(for: p.0, at: p.1, offset: offset + 1)
-        }
-        .joined(separator: "\n\n")
-        let footer = """
-        \(String(repeating: " ", count: offset * 4))}
-        """
-
-        return switch (children.isEmpty, renderers.isEmpty) {
-        case (true, true):
-            [header, footer].joined(separator: "\n")
-        case (true, false):
-            [header, renderers, footer].joined(separator: "\n")
-        case (false, true):
-            [header, children, footer].joined(separator: "\n")
-        case (false, false):
-            [header, children, "", renderers, footer].joined(separator: "\n")
-        }
-    }
-
-    func identContentOf(path: String, offset: Int) -> String {
-        guard let contents = try? String(contentsOfFile: path) else { return "" }
-
-        return contents.replacingOccurrences(of: "\n", with: "\n\(String(repeating: " ", count: offset * 4))")
-    }
-
-    func buildRenderFunc(for path: String, offset: Int = 0) -> String {
-        """
-        \(String(repeating: " ", count: offset * 4))static func render() -> String {
-        \(String(repeating: " ", count: offset * 4))    \"\"\"
-        \(String(repeating: " ", count: offset * 4))    \(identContentOf(path: path, offset: offset + 1))
-        \(String(repeating: " ", count: offset * 4))    \"\"\"
-        \(String(repeating: " ", count: offset * 4))}
-        """
-    }
-
-    func buildPathFunc(for path: String, offset: Int = 0) -> String {
-        """
-        \(String(repeating: " ", count: offset * 4))static func path() -> String {
-        \(String(repeating: " ", count: offset * 4))    \"\"\"
-        \(String(repeating: " ", count: offset * 4))    \(path)
-        \(String(repeating: " ", count: offset * 4))    \"\"\"
-        \(String(repeating: " ", count: offset * 4))}
-        """
-    }
-
-    func buildPageEnum(for name: String, at path: String, offset: Int = 0) -> String {
-        """
-        \(String(repeating: " ", count: offset * 4))enum \(name.capitalized) {
-        \(buildPathFunc(for: path, offset: offset + 1))
-
-        \(buildRenderFunc(for: path, offset: offset + 1))
-        \(String(repeating: " ", count: offset * 4))}
-        """
+    struct AttributeCondition {
+        let type: ConditionType
+        let check: String
+        let name: String?
     }
 }
