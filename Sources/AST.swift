@@ -33,13 +33,3 @@ indirect enum AST {
         let name: String?
     }
 }
-
-struct TagRef {
-    enum TagType {
-        case open, close, selfclose
-    }
-    let name: String
-    let value: String
-    let type: TagType
-    let attributes: String
-}

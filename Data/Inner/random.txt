@@ -13,7 +13,7 @@
   <r-eval line="" />
   <r-slot name="" />
 
-  <r-block for-every="">
+  <r-block r-for-every="">
     <p>Hello <r-index />: <r-item /></p>
     <p>
       <r-eval>
