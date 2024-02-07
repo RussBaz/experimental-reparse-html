@@ -8,34 +8,44 @@ extension Parser {
         var parent: ParseContext?
         var current: [AST] = []
         var postponed: [CloseTagRef] = []
-        var level: Int = 0
+        var level: Int = 1
+        var lastElement: Element?
 
-        init(parent: ParseContext? = nil, current: [AST], postponed: [CloseTagRef], level: Int) {
+        init(parent: ParseContext? = nil, current: [AST], postponed: [CloseTagRef], level: Int, lastElement: Element? = nil) {
             self.parent = parent
             self.current = current
             self.postponed = postponed
             self.level = level
+            self.lastElement = lastElement
         }
 
         init(parent p: ParseContext) {
             parent = p
             current = []
             postponed = []
-            level = 0
+            level = 1
+            lastElement = nil
         }
 
         init() {}
 
         func appendConstant(_ value: String) {
-            if let last = current.popLast(), case var .constant(contents) = last {
-                contents.append(value)
-                current.append(.constant(contents: contents))
+            if let last = current.popLast() {
+                switch last {
+                case var .constant(contents):
+                    contents.append(value)
+                    current.append(.constant(contents: contents))
+                default:
+                    current.append(last)
+                    current.append(.constant(contents: [value]))
+                }
             } else {
                 current.append(.constant(contents: [value]))
             }
         }
 
         func appendChildContext(_ context: ParseContext) {
+            print("Appending")
             if let last = current.popLast() {
                 switch last {
                 case let .slotDeclaration(name, _):
@@ -51,6 +61,51 @@ extension Parser {
                 default:
                     current.append(last)
                 }
+            } else {
+                print("Append failed")
+            }
+        }
+
+        func next(current element: Element, skip: Bool = false) -> (element: Element, context: ParseContext)? {
+            if let node = element.children().first() {
+                level += 1
+                return (element: node, context: self)
+            } else if level > 0, let node = try? element.nextElementSibling() {
+                if !skip, let closing = postponed.popLast(), let value = closing.tag {
+                    appendConstant(value)
+                }
+                return (element: node, context: self)
+            } else {
+                var e: Element? = element
+                while level > 0 {
+                    level -= 1
+                    if let closing = postponed.popLast(), let value = closing.tag {
+                        appendConstant(value)
+                    }
+                    guard let parent = e?.parent() else { break }
+                    e = parent
+                    if let next = try? e?.nextElementSibling() {
+                        if let closing = postponed.popLast(), let value = closing.tag {
+                            appendConstant(value)
+                        }
+                        return (element: next, context: self)
+                    }
+                }
+
+                for i in postponed.reversed() {
+                    if let value = i.tag {
+                        appendConstant(value)
+                    }
+                }
+
+                if let parent {
+                    parent.appendChildContext(self)
+                    if let last = parent.lastElement {
+                        return parent.next(current: last, skip: true)
+                    }
+                }
+
+                return nil
             }
         }
     }
@@ -78,7 +133,7 @@ extension Parser {
     struct CloseTagRef {
         let name: String
         let value: String?
-        
+
         var tag: String? {
             if let value {
                 "</\(value)>"
@@ -137,7 +192,6 @@ extension Parser {
         var addToSlotLine: String?
         var replaceSlotLine: String?
 
-        
         if e.hasAttr("r-if"), let v = try? e.attr("r-if"), let _ = try? e.removeAttr("r-if") {
             ifLine = v
         }
@@ -171,8 +225,8 @@ extension Parser {
         return .init(ifLine: ifLine, ifElseLine: ifElseLine, elseLine: elseLine, tagLine: tagLine, forLine: forLine, addToSlotLine: addToSlotLine, replaceSlotLine: replaceSlotLine)
     }
 
-    static func nextElement(current element: Element, context: ParseContext) -> Element? {
-        if let node = element.children().first() {
+    static func nextElement(current element: Element, context: ParseContext, skip: Bool = false) -> Element? {
+        if !skip, let node = element.children().first() {
             context.level += 1
             return node
         } else if let node = try? element.nextElementSibling() {
@@ -183,6 +237,8 @@ extension Parser {
     }
 
     static func parseElement(current element: Element, context: ParseContext) {
+        print("\nCurrent: \(String(describing: try? element.outerHtml()))")
+        context.lastElement = element
         if let controlAttrs = hasContolAttrs(element) {
             let conditional = parseConditional(controlAttrs)
             let loop = parseLoop(controlAttrs)
@@ -190,13 +246,16 @@ extension Parser {
             if let conditional {
                 context.current.append(conditional)
                 let conditionalContext = ParseContext(parent: context)
+                conditionalContext.level = 0
                 if let loop {
                     conditionalContext.current.append(loop)
                     let loopContext = ParseContext(parent: conditionalContext)
+                    loopContext.level = 0
                     parseElement(current: element, context: loopContext)
                 } else if let slotCommand {
                     conditionalContext.current.append(slotCommand)
                     let slotCommandContext = ParseContext(parent: conditionalContext)
+                    slotCommandContext.level = 0
                     parseElement(current: element, context: slotCommandContext)
                 } else {
                     parseElement(current: element, context: conditionalContext)
@@ -205,10 +264,12 @@ extension Parser {
                 if let loop {
                     context.current.append(loop)
                     let loopContext = ParseContext(parent: context)
+                    loopContext.level = 0
                     parseElement(current: element, context: loopContext)
                 } else if let slotCommand {
                     context.current.append(slotCommand)
                     let slotCommandContext = ParseContext(parent: context)
+                    slotCommandContext.level = 0
                     parseElement(current: element, context: slotCommandContext)
                 } else {
                     // Impossible to reach
@@ -222,6 +283,10 @@ extension Parser {
             let attrs = try? element.getAttributes()?.html()
             let value: String
 
+            if tagName == "h1" {
+                ()
+            }
+
             if tag.isSelfClosing() {
                 value = "<\(tagName)\(attrs ?? "") />"
             } else {
@@ -230,36 +295,17 @@ extension Parser {
             }
 
             context.appendConstant(value)
-            
+
             if element.hasText(), let first = element.textNodes().first {
-                context.appendConstant(first.text())
+                let text = first.text().trimmingCharacters(in: .whitespacesAndNewlines)
+                if !text.isEmpty {
+                    context.appendConstant(text)
+                }
             }
 
-            if let next = nextElement(current: element, context: context) {
+            if let (next, context) = context.next(current: element) {
+                print("Next: \(String(describing: try? next.outerHtml()))")
                 return parseElement(current: next, context: context)
-            } else {
-                var e: Element? = element
-                while context.level > 0 {
-                    context.level -= 1
-                    if let closing = context.postponed.popLast(), let value = closing.tag {
-                        context.appendConstant(value)
-                    }
-                    guard let parent = e?.parent() else { break }
-                    e = parent
-                    if let next = try? e?.nextElementSibling() {
-                        return parseElement(current: next, context: context)
-                    }
-                }
-                
-                for i in context.postponed.reversed() {
-                    if let value = i.tag {
-                        context.appendConstant(value)
-                    }
-                }
-                
-                if let parent = context.parent {
-                    parent.appendChildContext(context)
-                }
             }
 
 //            switch tagName {

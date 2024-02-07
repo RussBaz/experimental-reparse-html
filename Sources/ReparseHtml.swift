@@ -6,6 +6,7 @@
 
 import ArgumentParser
 import Foundation
+import SwiftSoup
 
 struct PageDef {
     let path: String
@@ -30,18 +31,33 @@ struct ReparseHtml: ParsableCommand {
 //        let htmls = findAllFiles(in: [location.path])
 
 //        let ast = OutNode.from(htmls)
+        guard let doc = try? SwiftSoup.parseBodyFragment("<p>1<br/>2<span>-</span>world </p>") else { return }
+        guard let body = doc.body() else { return }
+        guard let first = body.children().first() else { return }
+
+        for node in first.getChildNodes() {
+            if let _ = node as? TextNode {
+                print("Text Node: \(node)")
+            }
+
+            if let _ = node as? Element {
+                print("Element Node: \(node)")
+            }
+        }
+
         print("Looking for file at: \(location.path)/test.html")
 
         if let contents = try? String(contentsOfFile: "\(location.path)/test.html") {
             if let ast = Parser.parseHtml(content: contents) {
                 for node in ast {
                     switch node {
-                    case .constant(let contents):
+                    case let .constant(contents):
+                        print("\nConstant ->")
                         for c in contents {
                             print(c)
                         }
                     default:
-                        print("Node: \(node)")
+                        print("\nNode: \(node)")
                     }
                 }
             } else {
