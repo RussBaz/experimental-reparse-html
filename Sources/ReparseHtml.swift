@@ -18,6 +18,22 @@ struct RendererDef {
     let name: String
 }
 
+struct MyVisitor: NodeVisitor {
+    func head(_ node: SwiftSoup.Node, _ depth: Int) throws {
+        let isTextNode = if let _ = node as? TextNode { true } else { false }
+        let isElementNode = if let _ = node as? Element { true } else { false }
+        let tag = if isElementNode { " (\((node as! Element).tagName()))" } else { "" }
+        let text = if isTextNode { " (\((node as! TextNode).text()))" } else { "" }
+        let nodeType = if isTextNode { "text\(text)" } else if isElementNode { "element\(tag)" } else { "unknown" }
+        let childrenCount = node.childNodeSize()
+        print("[\(depth): \(nodeType) with \(childrenCount) children]")
+    }
+
+    func tail(_: SwiftSoup.Node, _ depth: Int) throws {
+        print("[\(depth): Return]")
+    }
+}
+
 @main
 struct ReparseHtml: ParsableCommand {
     @Argument(help: "The target data folder location.", transform: URL.init(fileURLWithPath:))
@@ -31,41 +47,35 @@ struct ReparseHtml: ParsableCommand {
 //        let htmls = findAllFiles(in: [location.path])
 
 //        let ast = OutNode.from(htmls)
-        guard let doc = try? SwiftSoup.parseBodyFragment("<p>1<br/>2<span>-</span>world </p>") else { return }
+        guard let contents = try? String(contentsOfFile: "\(location.path)/test.html") else { return }
+        guard let doc = try? SwiftSoup.parseBodyFragment(contents) else { return }
         guard let body = doc.body() else { return }
-        guard let first = body.children().first() else { return }
 
-        for node in first.getChildNodes() {
-            if let _ = node as? TextNode {
-                print("Text Node: \(node)")
-            }
-
-            if let _ = node as? Element {
-                print("Element Node: \(node)")
-            }
+        for item in body.getChildNodes() {
+            try item.traverse(MyVisitor())
         }
 
-        print("Looking for file at: \(location.path)/test.html")
-
-        if let contents = try? String(contentsOfFile: "\(location.path)/test.html") {
-            if let ast = Parser.parseHtml(content: contents) {
-                for node in ast {
-                    switch node {
-                    case let .constant(contents):
-                        print("\nConstant ->")
-                        for c in contents {
-                            print(c)
-                        }
-                    default:
-                        print("\nNode: \(node)")
-                    }
-                }
-            } else {
-                print("Could not parse the file.")
-            }
-        } else {
-            print("File not found.")
-        }
+//        print("Looking for file at: \(location.path)/test.html")
+//
+//        if let contents = try? String(contentsOfFile: "\(location.path)/test.html") {
+//            if let ast = Parser.parseHtml(content: contents) {
+//                for node in ast {
+//                    switch node {
+//                    case let .constant(contents):
+//                        print("\nConstant ->")
+//                        for c in contents {
+//                            print(c)
+//                        }
+//                    default:
+//                        print("\nNode: \(node)")
+//                    }
+//                }
+//            } else {
+//                print("Could not parse the file.")
+//            }
+//        } else {
+//            print("File not found.")
+//        }
     }
 
     func directoryExists(at path: String) -> Bool {
