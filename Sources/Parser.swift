@@ -198,6 +198,8 @@ extension Parser {
                     conditionalContext.current.append(slotCommand)
                     let slotCommandContext = ParseContext(parent: conditionalContext)
                     parseElement(current: element, context: slotCommandContext)
+                } else {
+                    parseElement(current: element, context: conditionalContext)
                 }
             } else {
                 if let loop {
@@ -208,6 +210,9 @@ extension Parser {
                     context.current.append(slotCommand)
                     let slotCommandContext = ParseContext(parent: context)
                     parseElement(current: element, context: slotCommandContext)
+                } else {
+                    // Impossible to reach
+                    parseElement(current: element, context: context)
                 }
             }
 
