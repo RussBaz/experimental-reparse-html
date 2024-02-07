@@ -1,10 +1,12 @@
+import SwiftSoup
+
 indirect enum AST {
-    case constant(contents: String)
-    case slotDeclaration(name: String)
-    case slotCommand(type: SlotCommandType, contents: AST)
-    case include(name: String, contents: AST)
-    case conditional(name: String?, check: String, type: ConditionType, contents: AST)
-    case loop(forEvery: String, name: String?, contents: AST)
+    case constant(contents: [String])
+    case slotDeclaration(name: String, defaults: [AST])
+    case slotCommand(type: SlotCommandType, contents: [AST])
+    case include(name: String, contents: [AST])
+    case conditional(name: String?, check: String, type: ConditionType, contents: [AST])
+    case loop(forEvery: String, name: String?, contents: [AST])
     case modifiers(applying: [AttributeModifier], node: String)
     case eval(line: String)
     case value(of: String)

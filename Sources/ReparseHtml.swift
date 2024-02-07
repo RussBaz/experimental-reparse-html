@@ -27,12 +27,28 @@ struct ReparseHtml: ParsableCommand {
             throw ValidationError("Folder does not exist at \(location.path)")
         }
 
-        let htmls = findAllFiles(in: [location.path])
+//        let htmls = findAllFiles(in: [location.path])
 
-        let ast = OutNode.from(htmls)
+//        let ast = OutNode.from(htmls)
+        print("Looking for file at: \(location.path)/test.html")
 
-        if let contents = try? String(contentsOfFile: "./Data/test.html") {
-            let _ = Parser.parseHtml(content: contents)
+        if let contents = try? String(contentsOfFile: "\(location.path)/test.html") {
+            if let ast = Parser.parseHtml(content: contents) {
+                for node in ast {
+                    switch node {
+                    case .constant(let contents):
+                        for c in contents {
+                            print(c)
+                        }
+                    default:
+                        print("Node: \(node)")
+                    }
+                }
+            } else {
+                print("Could not parse the file.")
+            }
+        } else {
+            print("File not found.")
         }
     }
 
