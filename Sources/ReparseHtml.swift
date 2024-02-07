@@ -31,7 +31,9 @@ struct ReparseHtml: ParsableCommand {
 
         let ast = OutNode.from(htmls)
 
-        print(ast.build())
+        if let contents = try? String(contentsOfFile: "/Users/ruslan/Projects/GitHub/experimental-reparse-html/Data/test.html") {
+            let _ = Parser.parseHtml(content: contents)
+        }
     }
 
     func directoryExists(at path: String) -> Bool {
