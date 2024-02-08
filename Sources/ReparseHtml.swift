@@ -45,37 +45,30 @@ struct ReparseHtml: ParsableCommand {
         }
 
 //        let htmls = findAllFiles(in: [location.path])
-
-//        let ast = OutNode.from(htmls)
-        guard let contents = try? String(contentsOfFile: "\(location.path)/test.html") else { return }
-        guard let doc = try? SwiftSoup.parseBodyFragment(contents) else { return }
-        guard let body = doc.body() else { return }
-
-        for item in body.getChildNodes() {
-            try item.traverse(MyVisitor())
-        }
-
-//        print("Looking for file at: \(location.path)/test.html")
 //
-//        if let contents = try? String(contentsOfFile: "\(location.path)/test.html") {
-//            if let ast = Parser.parseHtml(content: contents) {
-//                for node in ast {
-//                    switch node {
-//                    case let .constant(contents):
-//                        print("\nConstant ->")
-//                        for c in contents {
-//                            print(c)
-//                        }
-//                    default:
-//                        print("\nNode: \(node)")
-//                    }
-//                }
-//            } else {
-//                print("Could not parse the file.")
-//            }
-//        } else {
-//            print("File not found.")
-//        }
+//        let ast = OutNode.from(htmls)
+
+        print("Looking for file at: \(location.path)/test.html")
+
+        if let contents = try? String(contentsOfFile: "\(location.path)/test.html") {
+            if let ast = try? NewParser.parse(html: contents) {
+                for node in ast.values {
+                    switch node {
+                    case let .constant(contents):
+                        print("\nConstant ->")
+                        for c in contents {
+                            print(": \(c)")
+                        }
+                    default:
+                        print("\nNode: \(node)")
+                    }
+                }
+            } else {
+                print("Could not parse the file.")
+            }
+        } else {
+            print("File not found.")
+        }
     }
 
     func directoryExists(at path: String) -> Bool {

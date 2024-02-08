@@ -51,7 +51,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "/Users/russ/Projects/GitHub/ReparseHtml/Data"
+            argument = "/Users/ruslan/Projects/GitHub/experimental-reparse-html/Data"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
