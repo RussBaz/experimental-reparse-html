@@ -60,6 +60,10 @@ class ASTStorage {
     func closeBranch() {
         values.append(.endOfBranch)
     }
+
+    func popLast() -> AST? {
+        values.popLast()
+    }
 }
 
 extension ASTStorage: CustomStringConvertible {

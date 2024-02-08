@@ -1,3 +1,4 @@
+<r-include name="base"/>
 <div  disabled v=true b=01 class="oops привет 'a' | {b}" data-index-number="12314" >
     wut?
     <p>Hello <br>World!</p>
@@ -6,13 +7,24 @@
     <h4>oops</h4>
 </r-block>
 <r-include/>
+<r-include name="another">
+    <div>
+        <p class="normal">
+            Amazing!
+        </p>
+        <p r-add-to-slot="nope">test</p>
+        <p r-replace-slot="secondary">tester</p>
+    </div>
+</r-include>
 <br>
+<r-block />
 <div>
     <h1 r-for-every="b" r-if="a <1" r-tag="test">hello</h1>
     <span>1</span>
+    <r-block r-for-every="c">hello</r-block>
     <div>
         <h2>oh<span>-</span> no </h2>
-        <r-block r-for-every="">
+        <r-block r-for-every="v">
           <p>Hello <r-index />: <r-item /></p>
           <p>
             <r-eval>
@@ -23,4 +35,13 @@
     </div>
 </div>
 <span>2</span>
+<r-slot name="abc"><p>12</p></r-slot>
+<r-slot name="def"/>
 <a href="#" />
+<r-eval/>
+<r-eval line="1+2" />
+<br/>
+<p class="hidden">
+<r-unset name="class"/>
+    Amazing!
+</p>
