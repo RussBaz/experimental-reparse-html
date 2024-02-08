@@ -18,22 +18,6 @@ struct RendererDef {
     let name: String
 }
 
-struct MyVisitor: NodeVisitor {
-    func head(_ node: SwiftSoup.Node, _ depth: Int) throws {
-        let isTextNode = if let _ = node as? TextNode { true } else { false }
-        let isElementNode = if let _ = node as? Element { true } else { false }
-        let tag = if isElementNode { " (\((node as! Element).tagName()))" } else { "" }
-        let text = if isTextNode { " (\((node as! TextNode).text()))" } else { "" }
-        let nodeType = if isTextNode { "text\(text)" } else if isElementNode { "element\(tag)" } else { "unknown" }
-        let childrenCount = node.childNodeSize()
-        print("[\(depth): \(nodeType) with \(childrenCount) children]")
-    }
-
-    func tail(_: SwiftSoup.Node, _ depth: Int) throws {
-        print("[\(depth): Return]")
-    }
-}
-
 @main
 struct ReparseHtml: ParsableCommand {
     @Argument(help: "The target data folder location.", transform: URL.init(fileURLWithPath:))
@@ -52,6 +36,7 @@ struct ReparseHtml: ParsableCommand {
 
         if let contents = try? String(contentsOfFile: "\(location.path)/test.html") {
             if let ast = try? NewParser.parse(html: contents) {
+                print("Node count: \(ast.values.count)")
                 for node in ast.values {
                     switch node {
                     case let .constant(contents):

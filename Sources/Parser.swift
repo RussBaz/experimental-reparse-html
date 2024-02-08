@@ -3,18 +3,61 @@ import SwiftSoup
 
 class NewParser: NodeVisitor {
     let ast = ASTStorage()
+    var closeDepth: [Int: Int] = [:]
 
-    func head(_ node: Node, _: Int) throws {
+    func head(_ node: Node, _ depth: Int) throws {
         if let node = node as? TextNode {
             openTag(node)
         } else if let node = node as? Element {
-            openTag(node)
+            if let controlAttrs = ControlAttrs.new(from: node) {
+                if let conditional = isConditional(controlAttrs), let branch = ast.getCurrentBranch() {
+                    closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
+                    branch.append(node: conditional)
+                }
+
+                if let loop = isLoop(controlAttrs), let branch = ast.getCurrentBranch() {
+                    closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
+                    branch.append(node: loop)
+                }
+
+                if let slotControl = isSlotCommand(controlAttrs), let branch = ast.getCurrentBranch() {
+                    closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
+                    branch.append(node: slotControl)
+                }
+
+                openTag(node)
+            } else {
+                switch node.tagName() {
+                case "r-include":
+                    openIncludeTag(node)
+                case "r-set":
+                    openSetTag(node)
+                case "r-unset":
+                    openUnsetTag(node)
+                case "r-var":
+                    openVarTag(node)
+                case "r-value":
+                    openValueTag(node)
+                case "r-eval":
+                    openEvalTag(node)
+                case "r-slot":
+                    openSetTag(node)
+                case "r-block":
+                    openBlockTag(node)
+                case "r-index":
+                    openIndexTag(node)
+                case "r-item":
+                    openItemTag(node)
+                default:
+                    openTag(node)
+                }
+            }
         } else {
             print("Error - unreachable node reached on tag entry")
         }
     }
 
-    func tail(_ node: Node, _: Int) throws {
+    func tail(_ node: Node, _ depth: Int) throws {
         if let node = node as? TextNode {
             closeTag(node)
         } else if let node = node as? Element {
@@ -22,6 +65,8 @@ class NewParser: NodeVisitor {
         } else {
             print("Error - unreachable node reached on tag exit")
         }
+
+        closeInnerASTs(for: depth)
     }
 
     static func parse(html root: Element) throws -> ASTStorage {
@@ -117,6 +162,18 @@ extension NewParser {
         branch.appendToLastConstant(content: value)
     }
 
+    func closeInnerASTs(for depth: Int) {
+        let times = closeDepth.removeValue(forKey: depth) ?? 0
+
+        guard times > 0 else { return }
+
+        for _ in 0 ..< times {
+            if let branch = ast.getCurrentBranch() {
+                branch.append(node: .endOfBranch)
+            }
+        }
+    }
+
     func closeTag(_: TextNode) {
         // Do nothing on text
     }
@@ -130,5 +187,79 @@ extension NewParser {
 
         let tagName = tag.getNameNormal()
         branch.appendToLastConstant(content: "</\(tagName)>")
+    }
+
+    func isConditional(_ attrs: ControlAttrs) -> AST? {
+        switch (attrs.ifLine, attrs.ifElseLine, attrs.elseLine, attrs.tagLine) {
+        case let (.some(line), _, _, tag):
+            .conditional(name: tag, check: line, type: .ifType, contents: ASTStorage())
+        case let (.none, .some(line), _, tag):
+            .conditional(name: tag, check: line, type: .elseIfType, contents: ASTStorage())
+        case let (.none, .none, .some(line), tag):
+            .conditional(name: tag, check: line, type: .elseType, contents: ASTStorage())
+        case (.none, .none, .none, _):
+            nil
+        }
+    }
+
+    func isLoop(_ attrs: ControlAttrs) -> AST? {
+        switch (attrs.forLine, attrs.tagLine) {
+        case let (.some(line), tag):
+            .loop(forEvery: line, name: tag, contents: ASTStorage())
+        case (.none, _):
+            nil
+        }
+    }
+
+    func isSlotCommand(_ attrs: ControlAttrs) -> AST? {
+        if let name = attrs.addToSlotLine {
+            return .slotCommand(type: .add(name: name), contents: ASTStorage())
+        }
+
+        if let name = attrs.replaceSlotLine {
+            return .slotCommand(type: .replace(name: name), contents: ASTStorage())
+        }
+
+        return nil
+    }
+
+    func openIncludeTag(_ element: Element) {
+        openTag(element)
+    }
+
+    func openSetTag(_ element: Element) {
+        openTag(element)
+    }
+
+    func openUnsetTag(_ element: Element) {
+        openTag(element)
+    }
+
+    func openVarTag(_ element: Element) {
+        openTag(element)
+    }
+
+    func openValueTag(_ element: Element) {
+        openTag(element)
+    }
+
+    func openEvalTag(_ element: Element) {
+        openTag(element)
+    }
+
+    func openSlotTag(_ element: Element) {
+        openTag(element)
+    }
+
+    func openBlockTag(_ element: Element) {
+        openTag(element)
+    }
+
+    func openIndexTag(_ element: Element) {
+        openTag(element)
+    }
+
+    func openItemTag(_ element: Element) {
+        openTag(element)
     }
 }

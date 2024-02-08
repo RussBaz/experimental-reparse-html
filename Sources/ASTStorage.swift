@@ -53,7 +53,17 @@ class ASTStorage {
         }
     }
 
+    func append(node: AST) {
+        values.append(node)
+    }
+
     func closeBranch() {
         values.append(.endOfBranch)
+    }
+}
+
+extension ASTStorage: CustomStringConvertible {
+    var description: String {
+        "[\(values.map { "\($0)" }.joined(separator: "\n\n"))]"
     }
 }
