@@ -45,7 +45,7 @@ struct ReparseHtml: ParsableCommand {
                             print(": \(c)")
                         }
                     default:
-                        print("\nNode: \(node)")
+                        print("\nNode -> \(node)")
                     }
                 }
             } else {

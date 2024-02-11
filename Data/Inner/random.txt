@@ -8,7 +8,7 @@
 <div>
   <r-set name="" value="" append />
   <r-unset name="" />
-  <r-var name="" value="" />
+  <r-var name="" line="" />
   <r-value of="" />
   <r-eval line="" />
   <r-slot name="" />

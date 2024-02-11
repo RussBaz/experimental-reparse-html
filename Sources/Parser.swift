@@ -37,9 +37,9 @@ final class NewParser: NodeVisitor {
             case "r-unset":
                 openUnsetTag(node, depth: depth)
             case "r-var":
-                openVarTag(node)
+                openVarTag(node, depth: depth)
             case "r-value":
-                openValueTag(node)
+                openValueTag(node, depth: depth)
             case "r-eval":
                 openEvalTag(node, depth: depth)
             case "r-slot":
@@ -47,9 +47,9 @@ final class NewParser: NodeVisitor {
             case "r-block":
                 openBlockTag(node)
             case "r-index":
-                openIndexTag(node)
+                openIndexTag(node, depth: depth)
             case "r-item":
-                openItemTag(node)
+                openItemTag(node, depth: depth)
             default:
                 openTag(node)
             }
@@ -215,9 +215,9 @@ extension NewParser {
         case "r-unset":
             ()
         case "r-var":
-            branch.appendToLastConstant(content: .tag(value: .closingTag(name: "r-var")))
+            ()
         case "r-value":
-            branch.appendToLastConstant(content: .tag(value: .closingTag(name: "r-var")))
+            ()
         case "r-eval":
             ()
         case "r-slot":
@@ -225,9 +225,9 @@ extension NewParser {
         case "r-block":
             ()
         case "r-index":
-            branch.appendToLastConstant(content: .tag(value: .closingTag(name: "r-index")))
+            ()
         case "r-item":
-            branch.appendToLastConstant(content: .tag(value: .closingTag(name: "r-item")))
+            ()
         default:
             branch.appendToLastConstant(content: .tag(value: .closingTag(name: tagName)))
         }
@@ -479,15 +479,46 @@ extension NewParser {
         }
     }
 
-    func openVarTag(_ element: Element) {
-        openTag(element)
+    func openVarTag(_ element: Element, depth: Int) {
+        guard let branch = ast.getCurrentBranch() else { return }
+
+        guard element.hasAttr("name"), let name = try? element.attr("name") else {
+            if element.tag().isSelfClosing() {
+                try? element.remove()
+            } else {
+                ignoringUntilDepth = depth
+            }
+            return
+        }
+
+        guard element.hasAttr("line"), let line = try? element.attr("line") else {
+            if element.tag().isSelfClosing() {
+                try? element.remove()
+            } else {
+                ignoringUntilDepth = depth
+            }
+            return
+        }
+
+        branch.append(node: .assignment(name: name, line: line))
     }
 
-    func openValueTag(_ element: Element) {
-        openTag(element)
+    func openValueTag(_ element: Element, depth: Int) {
+        guard let branch = ast.getCurrentBranch() else { return }
+
+        guard element.hasAttr("of"), let name = try? element.attr("of") else {
+            if element.tag().isSelfClosing() {
+                try? element.remove()
+            } else {
+                ignoringUntilDepth = depth
+            }
+            return
+        }
+
+        branch.append(node: .value(of: name))
     }
 
-    func openEvalTag(_ element: Element, depth: Int) {
+    func openEvalTag(_ element: Element, depth _: Int) {
         guard let branch = ast.getCurrentBranch() else { return }
 
         if element.hasAttr("line"), let line = try? element.attr("line") {
@@ -498,12 +529,6 @@ extension NewParser {
             if let line = textNodes.first, textNodes.count == 1 {
                 branch.append(node: .eval(line: line.text()))
             }
-        }
-
-        if element.tag().isSelfClosing() {
-            try? element.remove()
-        } else {
-            ignoringUntilDepth = depth
         }
     }
 
@@ -529,11 +554,25 @@ extension NewParser {
         }
     }
 
-    func openIndexTag(_ element: Element) {
-        openTag(element)
+    func openIndexTag(_ element: Element, depth: Int) {
+        guard let branch = ast.getCurrentBranch() else { return }
+
+        branch.append(node: .index)
+
+        guard element.tag().isSelfClosing() else {
+            ignoringUntilDepth = depth
+            return
+        }
     }
 
-    func openItemTag(_ element: Element) {
-        openTag(element)
+    func openItemTag(_ element: Element, depth: Int) {
+        guard let branch = ast.getCurrentBranch() else { return }
+
+        branch.append(node: .item)
+
+        guard element.tag().isSelfClosing() else {
+            ignoringUntilDepth = depth
+            return
+        }
     }
 }
