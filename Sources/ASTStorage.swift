@@ -1,4 +1,4 @@
-class ASTStorage {
+final class ASTStorage {
     var values: [AST] = []
 
     func getCurrentBranch() -> ASTStorage? {
@@ -39,7 +39,7 @@ class ASTStorage {
         }
     }
 
-    func appendToLastConstant(content value: String) {
+    func appendToLastConstant(content value: AST.Content) {
         if let last = values.popLast() {
             if case var .constant(contents) = last {
                 contents.append(value)

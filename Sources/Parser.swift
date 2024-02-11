@@ -1,7 +1,7 @@
 import Foundation
 import SwiftSoup
 
-class NewParser: NodeVisitor {
+final class NewParser: NodeVisitor {
     let ast = ASTStorage()
     var closeDepth: [Int: Int] = [:]
     var ignoringUntilDepth: Int?
@@ -156,22 +156,14 @@ extension NewParser {
 extension NewParser {
     func openTag(_ text: TextNode) {
         guard let branch = ast.getCurrentBranch() else { return }
-        branch.appendToLastConstant(content: text.text())
+        branch.appendToLastConstant(content: .text(value: text.text()))
     }
 
     func openTag(_ element: Element) {
         guard let branch = ast.getCurrentBranch() else { return }
-        let tag = element.tag()
-        let tagName = tag.getNameNormal()
-        let attrs = try? element.getAttributes()?.html()
+        let tag = AST.TagType.from(element: element)
 
-        let value = if tag.isSelfClosing() {
-            "<\(tagName)\(attrs ?? "")/>"
-        } else {
-            "<\(tagName)\(attrs ?? "")>"
-        }
-
-        branch.appendToLastConstant(content: value)
+        branch.appendToLastConstant(content: .tag(value: tag))
     }
 
     func closeInnerASTs(for depth: Int) {
@@ -203,13 +195,13 @@ extension NewParser {
         case "r-include":
             branch.closeBranch()
         case "r-set":
-            branch.appendToLastConstant(content: "</\(tagName)>")
+            branch.appendToLastConstant(content: .tag(value: .closingTag(name: "r-set")))
         case "r-unset":
             ()
         case "r-var":
-            branch.appendToLastConstant(content: "</\(tagName)>")
+            branch.appendToLastConstant(content: .tag(value: .closingTag(name: "r-var")))
         case "r-value":
-            branch.appendToLastConstant(content: "</\(tagName)>")
+            branch.appendToLastConstant(content: .tag(value: .closingTag(name: "r-var")))
         case "r-eval":
             ()
         case "r-slot":
@@ -217,11 +209,11 @@ extension NewParser {
         case "r-block":
             ()
         case "r-index":
-            branch.appendToLastConstant(content: "</\(tagName)>")
+            branch.appendToLastConstant(content: .tag(value: .closingTag(name: "r-index")))
         case "r-item":
-            branch.appendToLastConstant(content: "</\(tagName)>")
+            branch.appendToLastConstant(content: .tag(value: .closingTag(name: "r-item")))
         default:
-            branch.appendToLastConstant(content: "</\(tagName)>")
+            branch.appendToLastConstant(content: .tag(value: .closingTag(name: tagName)))
         }
     }
 
@@ -320,25 +312,30 @@ extension NewParser {
 
         if let last = branch.popLast() {
             switch last {
-            case .modifiers(applying: var modifiers, node: let node):
+            case .modifiers(applying: var modifiers, tag: let tag):
                 modifiers.append(modifier)
-                branch.append(node: .modifiers(applying: modifiers, node: node))
+                branch.append(node: .modifiers(applying: modifiers, tag: tag))
             case var .constant(contents: contents):
-                var found = false
-
-                while !contents.isEmpty {
-                    if let node = contents.popLast() {
-                        if !node.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            branch.append(node: .constant(contents: contents))
-                            branch.append(node: .modifiers(applying: [modifier], node: node))
-                            found = true
-                            break
-                        }
-                    }
-                }
-                if !found {
+                guard let index = contents.lastIndex(where: { !$0.isEmpty }) else {
                     branch.append(node: last)
+                    return
                 }
+
+                let item = contents[index]
+
+                guard case let .tag(value: tag) = item, !tag.isClosing else {
+                    branch.append(node: last)
+                    return
+                }
+
+                if contents.endIndex - 1 == index {
+                    contents.removeLast()
+                } else {
+                    contents.removeSubrange(index ..< index + 2)
+                }
+
+                branch.append(node: .constant(contents: contents))
+                branch.append(node: .modifiers(applying: [modifier], tag: tag))
             default:
                 branch.append(node: last)
             }
