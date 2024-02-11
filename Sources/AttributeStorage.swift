@@ -9,7 +9,7 @@ final class AttributeStorage {
 
     var attributes: [String: AttributeValue] = [:]
 
-    static func from(element: Element) -> AttributeStorage {
+    static func from(element: Node) -> AttributeStorage {
         let storage = AttributeStorage()
         guard let attributes = element.getAttributes() else { return storage }
 

@@ -33,7 +33,7 @@ final class NewParser: NodeVisitor {
             case "r-include":
                 openIncludeTag(node)
             case "r-set":
-                openSetTag(node)
+                openSetTag(node, depth: depth)
             case "r-unset":
                 openUnsetTag(node, depth: depth)
             case "r-var":
@@ -53,8 +53,10 @@ final class NewParser: NodeVisitor {
             default:
                 openTag(node)
             }
+        } else if let node = node as? DataNode {
+            openTag(node)
         } else {
-            print("Error - unreachable node reached on tag entry")
+            print("Error - unreachable node reached on tag entry: \(node)")
         }
     }
 
@@ -70,8 +72,10 @@ final class NewParser: NodeVisitor {
             closeTag(node)
         } else if let node = node as? Element {
             closeTag(node)
+        } else if let node = node as? DataNode {
+            closeTag(node)
         } else {
-            print("Error - unreachable node reached on tag exit")
+            print("Error - unreachable node reached on tag exit: \(node)")
         }
 
         closeInnerASTs(for: depth)
@@ -166,6 +170,18 @@ extension NewParser {
         branch.appendToLastConstant(content: .tag(value: tag))
     }
 
+    func openTag(_ element: DataNode) {
+        guard let branch = ast.getCurrentBranch() else { return }
+
+        let tag = element.nodeName()
+
+        if tag == "#data" {
+            branch.appendToLastConstant(content: .text(value: element.getWholeData()))
+        } else {
+            branch.appendToLastConstant(content: .tag(value: .openingTag(name: tag, attributes: AttributeStorage.from(element: element))))
+        }
+    }
+
     func closeInnerASTs(for depth: Int) {
         let times = closeDepth.removeValue(forKey: depth) ?? 0
 
@@ -195,7 +211,7 @@ extension NewParser {
         case "r-include":
             branch.closeBranch()
         case "r-set":
-            branch.appendToLastConstant(content: .tag(value: .closingTag(name: "r-set")))
+            ()
         case "r-unset":
             ()
         case "r-var":
@@ -215,6 +231,16 @@ extension NewParser {
         default:
             branch.appendToLastConstant(content: .tag(value: .closingTag(name: tagName)))
         }
+    }
+
+    func closeTag(_ element: DataNode) {
+        guard let branch = ast.getCurrentBranch() else { return }
+
+        let tag = element.nodeName()
+
+        guard tag != "#data" else { return }
+
+        branch.appendToLastConstant(content: .tag(value: .closingTag(name: tag)))
     }
 
     func isConditional(_ attrs: ControlAttrs) -> AST? {
@@ -265,9 +291,108 @@ extension NewParser {
         }
     }
 
-    func openSetTag(_ element: Element) {
-        guard let _ = ast.getCurrentBranch() else { return }
-        openTag(element)
+    func openSetTag(_ element: Element, depth: Int) {
+        guard let branch = ast.getCurrentBranch() else { return }
+
+        guard element.hasAttr("name"), let name = try? element.attr("name") else {
+            if element.tag().isSelfClosing() {
+                try? element.remove()
+            } else {
+                ignoringUntilDepth = depth
+            }
+            return
+        }
+
+        let attributeValue: AttributeStorage.AttributeValue = if element.hasAttr("value") {
+            if let value = try? element.attr("value") {
+                if name.starts(with: "data-"), name.count > 5 {
+                    .data(value)
+                } else {
+                    .string(value)
+                }
+            } else {
+                .flag
+            }
+        } else {
+            .flag
+        }
+
+        let appending = if element.hasAttr("append") { true } else { false }
+
+        let conditionName: String? = if element.hasAttr("r-tag") {
+            try? element.attr("r-tag")
+        } else {
+            nil
+        }
+
+        let condition: AST.AttributeCondition? = if element.hasAttr("r-if") {
+            if let check = try? element.attr("r-if") {
+                .init(type: .ifType, check: check, name: conditionName)
+            } else {
+                nil
+            }
+        } else if element.hasAttr("r-else-if") {
+            if let check = try? element.attr("r-else-if") {
+                .init(type: .ifType, check: check, name: conditionName)
+            } else {
+                nil
+            }
+        } else if element.hasAttr("r-else") {
+            .init(type: .ifType, check: "", name: conditionName)
+        } else {
+            nil
+        }
+
+        let modifier: AST.AttributeModifier = if appending {
+            .append(name: name, value: attributeValue, condition: condition)
+        } else {
+            .replace(name: name, value: attributeValue, condition: condition)
+        }
+
+        ignoringUntilDepth = depth
+
+        if let last = branch.popLast() {
+            switch last {
+            case .modifiers(applying: var modifiers, tag: let tag):
+                modifiers.append(modifier)
+                branch.append(node: .modifiers(applying: modifiers, tag: tag))
+            case var .constant(contents: contents):
+                if let index = contents.lastIndex(where: { !$0.isEmpty }) {
+                    let item = contents[index]
+
+                    guard case let .tag(value: tag) = item, !tag.isClosing else {
+                        branch.append(node: last)
+                        return
+                    }
+
+                    if contents.endIndex - 1 == index {
+                        contents.removeLast()
+                    } else {
+                        contents.removeSubrange(index ..< index + 2)
+                    }
+
+                    branch.append(node: .constant(contents: contents))
+                    branch.append(node: .modifiers(applying: [modifier], tag: tag))
+                } else {
+                    guard let secondLast = branch.popLast() else {
+                        branch.append(node: last)
+                        return
+                    }
+
+                    guard case .modifiers(var modifiers, let tag) = secondLast else {
+                        branch.append(node: secondLast)
+                        branch.append(node: last)
+                        return
+                    }
+
+                    modifiers.append(modifier)
+                    branch.append(node: .modifiers(applying: modifiers, tag: tag))
+                    branch.append(node: last)
+                }
+            default:
+                branch.append(node: last)
+            }
+        }
     }
 
     func openUnsetTag(_ element: Element, depth: Int) {
@@ -316,26 +441,38 @@ extension NewParser {
                 modifiers.append(modifier)
                 branch.append(node: .modifiers(applying: modifiers, tag: tag))
             case var .constant(contents: contents):
-                guard let index = contents.lastIndex(where: { !$0.isEmpty }) else {
-                    branch.append(node: last)
-                    return
-                }
+                if let index = contents.lastIndex(where: { !$0.isEmpty }) {
+                    let item = contents[index]
 
-                let item = contents[index]
+                    guard case let .tag(value: tag) = item, !tag.isClosing else {
+                        branch.append(node: last)
+                        return
+                    }
 
-                guard case let .tag(value: tag) = item, !tag.isClosing else {
-                    branch.append(node: last)
-                    return
-                }
+                    if contents.endIndex - 1 == index {
+                        contents.removeLast()
+                    } else {
+                        contents.removeSubrange(index ..< index + 2)
+                    }
 
-                if contents.endIndex - 1 == index {
-                    contents.removeLast()
+                    branch.append(node: .constant(contents: contents))
+                    branch.append(node: .modifiers(applying: [modifier], tag: tag))
                 } else {
-                    contents.removeSubrange(index ..< index + 2)
-                }
+                    guard let secondLast = branch.popLast() else {
+                        branch.append(node: last)
+                        return
+                    }
 
-                branch.append(node: .constant(contents: contents))
-                branch.append(node: .modifiers(applying: [modifier], tag: tag))
+                    guard case .modifiers(var modifiers, let tag) = secondLast else {
+                        branch.append(node: secondLast)
+                        branch.append(node: last)
+                        return
+                    }
+
+                    modifiers.append(modifier)
+                    branch.append(node: .modifiers(applying: modifiers, tag: tag))
+                    branch.append(node: last)
+                }
             default:
                 branch.append(node: last)
             }

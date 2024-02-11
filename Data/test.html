@@ -44,6 +44,17 @@
 <p class="hidden">
 
 <r-unset name="class"/>
+
+<r-set name="disabled" value="" />
     Amazing! <span>world</span>
 </p>
-<p class="hidden">Amazing! <span class="hidden"><r-unset name="class"/>world</span></p>
+<p class="hidden">Amazing! <span class="hidden" disabled><r-unset name="disabled"/><r-set name="class" value=" red" append/>world</span></p>
+<script>
+    let a = 12:
+    console.log('12' + a);
+</script>
+
+<template>
+    <div> <h1> test </h1>
+    </div>
+</template>

@@ -6,7 +6,7 @@
 </r-include>
 
 <div>
-  <r-set name="" value="" />
+  <r-set name="" value="" append />
   <r-unset name="" />
   <r-var name="" value="" />
   <r-value of="" />

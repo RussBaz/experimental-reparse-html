@@ -38,8 +38,8 @@ indirect enum AST {
     }
 
     enum AttributeModifier {
-        case append(name: String, value: String, condition: AttributeCondition?)
-        case replace(name: String, value: String, condition: AttributeCondition?)
+        case append(name: String, value: AttributeStorage.AttributeValue, condition: AttributeCondition?)
+        case replace(name: String, value: AttributeStorage.AttributeValue, condition: AttributeCondition?)
         case remove(name: String, condition: AttributeCondition?)
     }
 
@@ -53,14 +53,15 @@ indirect enum AST {
 extension AST.TagType {
     static func from(element: Element, closing: Bool = false) -> Self {
         let tag = element.tag()
+        let name = tag.getName()
 
         return if closing {
-            .closingTag(name: tag.getName())
+            .closingTag(name: name)
         } else {
             if tag.isSelfClosing() {
-                .selfClosingTag(name: tag.getName(), attributes: AttributeStorage.from(element: element))
+                .selfClosingTag(name: name, attributes: AttributeStorage.from(element: element))
             } else {
-                .openingTag(name: tag.getName(), attributes: AttributeStorage.from(element: element))
+                .openingTag(name: name, attributes: AttributeStorage.from(element: element))
             }
         }
     }
@@ -79,6 +80,16 @@ extension AST.Content {
             false
         case let .text(value):
             value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+}
+
+extension AST {
+    var isEmptyConstant: Bool {
+        if case let .constant(contents) = self {
+            contents.isEmpty || contents.allSatisfy(\.isEmpty)
+        } else {
+            false
         }
     }
 }
