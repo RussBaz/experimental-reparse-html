@@ -1,7 +1,7 @@
 import SwiftSoup
 
-final class AttributeStorage {
-    enum AttributeValue {
+public final class AttributeStorage {
+    public enum AttributeValue {
         case flag
         case string(String)
         case data(String)
@@ -28,7 +28,18 @@ final class AttributeStorage {
 }
 
 extension AttributeStorage: CustomStringConvertible {
-    var description: String {
-        "[\(attributes.map { "\($0)" }.joined(separator: ", "))]"
+    public var description: String {
+        var result = ""
+        for (key, attribute) in attributes {
+            switch attribute {
+            case .flag:
+                result += " \(key)"
+            case .string(let value):
+                result += " \(key)=\"\(value)\""
+            case .data(let value):
+                result += " \(key)=\"\(value)\""
+            }
+        }
+        return result
     }
 }

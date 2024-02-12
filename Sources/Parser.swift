@@ -87,8 +87,11 @@ final class NewParser: NodeVisitor {
         for node in root.getChildNodes() {
             try node.traverse(parser)
         }
-
-        return parser.ast
+        
+        let result = parser.ast
+        result.closeBranch()
+        
+        return result
     }
 
     static func parse(html text: String) throws -> ASTStorage? {
@@ -176,7 +179,12 @@ extension NewParser {
         let tag = element.nodeName()
 
         if tag == "#data" {
-            branch.appendToLastConstant(content: .text(value: element.getWholeData()))
+            let data = element.getWholeData().split(separator: "\n").map(String.init)
+            for d in data {
+                branch.appendToLastConstant(content: .text(value: " "))
+                branch.appendToLastConstant(content: .text(value: d))
+            }
+            branch.appendToLastConstant(content: .text(value: " "))
         } else {
             branch.appendToLastConstant(content: .tag(value: .openingTag(name: tag, attributes: AttributeStorage.from(element: element))))
         }
@@ -356,19 +364,19 @@ extension NewParser {
             case .modifiers(applying: var modifiers, tag: let tag):
                 modifiers.append(modifier)
                 branch.append(node: .modifiers(applying: modifiers, tag: tag))
-            case var .constant(contents: contents):
-                if let index = contents.lastIndex(where: { !$0.isEmpty }) {
-                    let item = contents[index]
+            case let .constant(contents: contents):
+                if let index = contents.values.lastIndex(where: { !$0.isEmpty }) {
+                    let item = contents.values[index]
 
                     guard case let .tag(value: tag) = item, !tag.isClosing else {
                         branch.append(node: last)
                         return
                     }
 
-                    if contents.endIndex - 1 == index {
-                        contents.removeLast()
+                    if contents.values.endIndex - 1 == index {
+                        contents.values.removeLast()
                     } else {
-                        contents.removeSubrange(index ..< index + 2)
+                        contents.values.removeSubrange(index ..< index + 2)
                     }
 
                     branch.append(node: .constant(contents: contents))
@@ -440,19 +448,19 @@ extension NewParser {
             case .modifiers(applying: var modifiers, tag: let tag):
                 modifiers.append(modifier)
                 branch.append(node: .modifiers(applying: modifiers, tag: tag))
-            case var .constant(contents: contents):
-                if let index = contents.lastIndex(where: { !$0.isEmpty }) {
-                    let item = contents[index]
+            case let .constant(contents: contents):
+                if let index = contents.values.lastIndex(where: { !$0.isEmpty }) {
+                    let item = contents.values[index]
 
                     guard case let .tag(value: tag) = item, !tag.isClosing else {
                         branch.append(node: last)
                         return
                     }
 
-                    if contents.endIndex - 1 == index {
-                        contents.removeLast()
+                    if contents.values.endIndex - 1 == index {
+                        contents.values.removeLast()
                     } else {
-                        contents.removeSubrange(index ..< index + 2)
+                        contents.values.removeSubrange(index ..< index + 2)
                     }
 
                     branch.append(node: .constant(contents: contents))

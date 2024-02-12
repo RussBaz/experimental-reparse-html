@@ -1,7 +1,7 @@
 import SwiftSoup
 
-indirect enum AST {
-    case constant(contents: [Content])
+public indirect enum AST {
+    case constant(contents: Contents)
     case slotDeclaration(name: String, defaults: ASTStorage)
     case slotCommand(type: SlotCommandType, contents: ASTStorage)
     case include(name: String, contents: ASTStorage)
@@ -15,38 +15,51 @@ indirect enum AST {
     case item
     case endOfBranch
 
-    enum TagType {
+    public enum TagType {
         case openingTag(name: String, attributes: AttributeStorage)
         case selfClosingTag(name: String, attributes: AttributeStorage)
         case closingTag(name: String)
     }
 
-    enum Content {
+    public enum Content {
         case tag(value: TagType)
         case text(value: String)
     }
 
-    enum ConditionType {
+    public enum ConditionType {
         case ifType
         case elseIfType
         case elseType
     }
 
-    enum SlotCommandType {
+    public enum SlotCommandType {
         case add(name: String)
         case replace(name: String)
     }
 
-    enum AttributeModifier {
+    public enum AttributeModifier {
         case append(name: String, value: AttributeStorage.AttributeValue, condition: AttributeCondition?)
         case replace(name: String, value: AttributeStorage.AttributeValue, condition: AttributeCondition?)
         case remove(name: String, condition: AttributeCondition?)
     }
 
-    struct AttributeCondition {
+    public struct AttributeCondition {
         let type: ConditionType
         let check: String
         let name: String?
+    }
+    
+    public class Contents {
+        
+        var values: [Content] = []
+        
+        init(_ values: [Content] = []) {
+            self.values = values
+        }
+        
+        var isEmpty: Bool {
+            values.isEmpty || values.allSatisfy(\.isEmpty)
+        }
     }
 }
 
@@ -73,7 +86,7 @@ extension AST.TagType {
     }}
 }
 
-extension AST.Content {
+public extension AST.Content {
     var isEmpty: Bool {
         switch self {
         case .tag:
@@ -82,14 +95,79 @@ extension AST.Content {
             value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
     }
+    
+    func text() -> String {
+        switch self {
+        case .tag(value: let value):
+            return value.text()
+        case .text(value: let value):
+            return value
+        }
+    }
 }
 
-extension AST {
+public extension AST {
     var isEmptyConstant: Bool {
         if case let .constant(contents) = self {
-            contents.isEmpty || contents.allSatisfy(\.isEmpty)
+            contents.isEmpty
         } else {
             false
         }
+    }
+}
+
+public extension AST.TagType {
+    func text() -> String {
+        switch self {
+        case .openingTag(let name, let attributes):
+            "<\(name)\(attributes)>"
+        case .selfClosingTag(let name, let attributes):
+            "<\(name)\(attributes)/>"
+        case .closingTag(let name):
+            "</\(name)>"
+        }
+    }
+}
+
+extension AST.Contents {
+    struct ContentsStringIterator: Sequence, IteratorProtocol {
+        var current = 0
+        let data: AST.Contents
+        
+        mutating func next() -> String? {
+            guard !data.isEmpty else { return nil }
+            guard current < data.values.count, current >= 0 else { return nil }
+            
+            let previousIndex: Int? = if current > 0 { current - 1 } else { nil }
+            let nextIndex: Int? = if current < data.values.count-1 { current + 1 } else { nil }
+            
+            let previousItem: AST.Content? = if let previousIndex { data.values[previousIndex] } else { nil }
+            let currentItem = data.values[current]
+            let nextItem: AST.Content? = if let nextIndex { data.values[nextIndex] } else { nil }
+            
+            current += 1
+            
+            guard let previousItem, let nextItem else {
+                if currentItem.isEmpty {
+                    return "\n"
+                } else {
+                    return currentItem.text()
+                }
+            }
+            
+            if case .tag(.openingTag) = previousItem, case .tag(.closingTag) = nextItem {
+                return currentItem.text()
+            }
+            
+            if currentItem.isEmpty {
+                return "\n"
+            } else {
+                return currentItem.text()
+            }
+        }
+    }
+    
+    var lines: ContentsStringIterator {
+        ContentsStringIterator(data: self)
     }
 }

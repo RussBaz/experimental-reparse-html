@@ -1,4 +1,4 @@
-final class ASTStorage {
+public final class ASTStorage {
     var values: [AST] = []
 
     func getCurrentBranch() -> ASTStorage? {
@@ -41,15 +41,15 @@ final class ASTStorage {
 
     func appendToLastConstant(content value: AST.Content) {
         if let last = values.popLast() {
-            if case var .constant(contents) = last {
-                contents.append(value)
+            if case let .constant(contents) = last {
+                contents.values.append(value)
                 values.append(.constant(contents: contents))
             } else {
                 values.append(last)
-                values.append(.constant(contents: [value]))
+                values.append(.constant(contents: AST.Contents([value])))
             }
         } else {
-            values.append(.constant(contents: [value]))
+            values.append(.constant(contents: AST.Contents([value])))
         }
     }
 
@@ -67,7 +67,7 @@ final class ASTStorage {
 }
 
 extension ASTStorage: CustomStringConvertible {
-    var description: String {
+    public var description: String {
         "[\(values.map { "\($0)" }.joined(separator: "\n\n"))]"
     }
 }
