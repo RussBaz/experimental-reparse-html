@@ -135,8 +135,12 @@ extension AST.Contents {
         let data: AST.Contents
         
         mutating func next() -> String? {
-            guard !data.isEmpty else { return nil }
-            guard current < data.values.count, current >= 0 else { return nil }
+            guard !data.isEmpty else {
+                return nil
+            }
+            guard current < data.values.count, current >= 0 else {
+                return nil
+            }
             
             let previousIndex: Int? = if current > 0 { current - 1 } else { nil }
             let nextIndex: Int? = if current < data.values.count-1 { current + 1 } else { nil }
@@ -151,18 +155,21 @@ extension AST.Contents {
                 if currentItem.isEmpty {
                     return "\n"
                 } else {
-                    return currentItem.text()
+                    let r = currentItem.text()
+                    return r
                 }
             }
             
             if case .tag(.openingTag) = previousItem, case .tag(.closingTag) = nextItem {
-                return currentItem.text()
+                let r = currentItem.text()
+                return r
             }
             
             if currentItem.isEmpty {
                 return "\n"
             } else {
-                return currentItem.text()
+                let r = currentItem.text()
+                return r
             }
         }
     }

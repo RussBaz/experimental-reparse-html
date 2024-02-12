@@ -9,14 +9,15 @@ public final class SwiftCodeGenerator: CodeGenerator {
         let name: String
         let type: String?
     }
-    
+        
     var parameters: [ParameterDef] = []
     var globalVariables: [VariableDef] = []
+    var conditionTags: [String] = ["previousUnnamedIfTaken"]
     var main: [String] = []
     var data: ASTStorage?
     
     let heqader = """
-    let storage = LineStorage()
+    let lines = LineStorage()
     """
     
     public func load(from storage: ASTStorage) {
@@ -29,17 +30,28 @@ public final class SwiftCodeGenerator: CodeGenerator {
         for node in data.values {
             switch node {
             case .constant(let contents):
-                var line = "\(String(repeating: "    ", count: indentation))line.append(\"\"\"\n"
-                var buffer = String(repeating: "    ", count: indentation)
+                var tmp: [String] = []
+                
+                var buffer = ""
                 for l in contents.lines {
-                    buffer += l
                     if l == "\n" {
-                        line.append(buffer)
-                        buffer = String(repeating: "    ", count: indentation)
+                        if !buffer.isEmpty {
+                            tmp.append("\(String(repeating: "    ", count: indentation))\(buffer)")
+                            buffer = ""
+                        }
+                    } else {
+                        buffer += l
                     }
                 }
-                line.append("\n\(String(repeating: "    ", count: indentation))\"\"\")")
-                main.append(line)
+                if !buffer.isEmpty {
+                    tmp.append("\(String(repeating: "    ", count: indentation))\(buffer)")
+                }
+                if !tmp.isEmpty {
+                    main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\"\"")
+                    tmp.forEach { main.append($0) }
+                    main.append("\(String(repeating: "    ", count: indentation))\"\"\")")
+                }
+                
             case .slotDeclaration(let name, let defaults):
                 ()
             case .slotCommand(let type, let contents):
@@ -47,21 +59,47 @@ public final class SwiftCodeGenerator: CodeGenerator {
             case .include(let name, let contents):
                 ()
             case .conditional(let name, let check, let type, let contents):
-                ()
+                let name = name ?? "previousUnnamedIfTaken"
+                let innerGenerator = SwiftCodeGenerator()
+                innerGenerator.load(from: contents)
+                let lines = innerGenerator.generateText(at: indentation+1)
+                
+                if !conditionTags.contains(name) {
+                    conditionTags.append(name)
+                }
+                
+                switch type {
+                case .ifType:
+                    main.append("\(String(repeating: "    ", count: indentation))if \(check) {")
+                case .elseIfType:
+                    main.append("\(String(repeating: "    ", count: indentation))if !\(name), \(check) {")
+                case .elseType:
+                    main.append("\(String(repeating: "    ", count: indentation))if !\(name) {")
+                }
+                main.append(lines)
+                main.append("\(String(repeating: "    ", count: indentation+1))\(name) = true")
+                main.append("\(String(repeating: "    ", count: indentation))}")
             case .loop(let forEvery, let name, let contents):
-                ()
+                let name = name ?? "previousUnnamedIfTaken"
+                let innerGenerator = SwiftCodeGenerator()
+                innerGenerator.load(from: contents)
+                let lines = innerGenerator.generateText(at: indentation+1)
+                main.append("\(String(repeating: "    ", count: indentation))for (index, item) in \(forEvery).enumerated() {")
+                main.append(lines)
+                main.append("\(String(repeating: "    ", count: indentation))}")
+                main.append("\(String(repeating: "    ", count: indentation))\(name) = if \(forEvery).isEmpty { false } else { true }")
             case .modifiers(let applying, let tag):
                 ()
             case .eval(let line):
-                ()
+                main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(\(line))\")")
             case .value(let of):
-                ()
+                main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(\(of))\")")
             case .assignment(let name, let line):
-                ()
+                main.append("\(String(repeating: "    ", count: indentation))let \(name) = \(line)")
             case .index:
-                ()
+                main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(index)\")")
             case .item:
-                ()
+                main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(item)\")")
             case .endOfBranch:
                 ()
             }
