@@ -24,6 +24,7 @@ public indirect enum AST {
     public enum Content {
         case tag(value: TagType)
         case text(value: String)
+        case newLine
     }
 
     public enum ConditionType {
@@ -93,6 +94,8 @@ public extension AST.Content {
             false
         case let .text(value):
             value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .newLine:
+            true
         }
     }
     
@@ -102,6 +105,8 @@ public extension AST.Content {
             return value.text()
         case .text(value: let value):
             return value
+        case .newLine:
+            return "\n"
         }
     }
 }

@@ -25,6 +25,19 @@ public final class AttributeStorage {
 
         return storage
     }
+    
+    static func from(attributes: [String: String]) -> AttributeStorage {
+        let storage = AttributeStorage()
+        for (key, value) in attributes {
+            if value.isEmpty {
+                storage.attributes[key] = .flag
+            } else {
+                storage.attributes[key] = .string(value)
+            }
+        }
+        
+        return storage
+    }
 }
 
 extension AttributeStorage: CustomStringConvertible {

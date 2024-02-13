@@ -14,6 +14,7 @@ public final class SwiftCodeGenerator: CodeGenerator {
     var globalVariables: [VariableDef] = []
     var conditionTags: [String] = ["previousUnnamedIfTaken"]
     var main: [String] = []
+    var includes: [String] = []
     var data: ASTStorage?
     
     let heqader = """
@@ -57,12 +58,24 @@ public final class SwiftCodeGenerator: CodeGenerator {
             case .slotCommand(let type, let contents):
                 ()
             case .include(let name, let contents):
-                ()
+                let name = ReparseHtml.splitFilenameIntoComponents(name)
+                if !name.isEmpty {
+                    let name = name.joined(separator: ".")
+                    includes.append(name)
+                    if !contents.values.isEmpty {
+                        let innerGenerator = SwiftCodeGenerator()
+                        innerGenerator.load(from: contents)
+                        let lines = innerGenerator.generateText(at: indentation+1)
+                        innerGenerator.copyInnerVariables(into: self)
+                        main.append(lines)
+                    }
+                }
             case .conditional(let name, let check, let type, let contents):
                 let name = name ?? "previousUnnamedIfTaken"
                 let innerGenerator = SwiftCodeGenerator()
                 innerGenerator.load(from: contents)
                 let lines = innerGenerator.generateText(at: indentation+1)
+                innerGenerator.copyInnerVariables(into: self)
                 
                 if !conditionTags.contains(name) {
                     conditionTags.append(name)
@@ -84,6 +97,7 @@ public final class SwiftCodeGenerator: CodeGenerator {
                 let innerGenerator = SwiftCodeGenerator()
                 innerGenerator.load(from: contents)
                 let lines = innerGenerator.generateText(at: indentation+1)
+                innerGenerator.copyInnerVariables(into: self)
                 main.append("\(String(repeating: "    ", count: indentation))for (index, item) in \(forEvery).enumerated() {")
                 main.append(lines)
                 main.append("\(String(repeating: "    ", count: indentation))}")
@@ -106,5 +120,13 @@ public final class SwiftCodeGenerator: CodeGenerator {
         }
         
         return main.joined(separator: "\n")
+    }
+    
+    func copyInnerVariables(into generator: SwiftCodeGenerator) {
+        for i in includes {
+            if !generator.includes.contains(i) {
+                generator.includes.append(i)
+            }
+        }
     }
 }

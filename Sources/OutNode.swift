@@ -66,7 +66,7 @@ extension OutNode {
         }
     }
 
-    func identContentOf(path: String, offset: Int) -> String {
+    func indentContentOf(path: String, offset: Int) -> String {
         guard let contents = try? String(contentsOfFile: path) else { return "" }
 
         return contents.replacingOccurrences(of: "\n", with: "\n\(String(repeating: " ", count: offset * 4))")
@@ -76,7 +76,7 @@ extension OutNode {
         """
         \(String(repeating: " ", count: offset * 4))static func render() -> String {
         \(String(repeating: " ", count: offset * 4))    \"\"\"
-        \(String(repeating: " ", count: offset * 4))    \(identContentOf(path: path, offset: offset + 1))
+        \(String(repeating: " ", count: offset * 4))    \(indentContentOf(path: path, offset: offset + 1))
         \(String(repeating: " ", count: offset * 4))    \"\"\"
         \(String(repeating: " ", count: offset * 4))}
         """
