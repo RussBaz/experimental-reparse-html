@@ -45,6 +45,8 @@ struct ReparseHtml: ParsableCommand {
                     print("Tag -> \(value.text())")
                 case .text(value: let value):
                     print("Text -> \"\(value)\"")
+                case .data(value: let value):
+                    print("Data -> \"\(value)\"")
                 case .newLine:
                     print("New Line")
                 }

@@ -78,13 +78,21 @@ final class SimpleHtmlParser {
         case .lookingForText(let buffer):
             if char == "<" {
                 if !buffer.isEmpty {
-                    nodes.append(.init(depth: currentDepth, content: .text(value: buffer)))
+                    if dataState != nil {
+                        nodes.append(.init(depth: currentDepth, content: .data(value: buffer)))
+                    } else {
+                        nodes.append(.init(depth: currentDepth, content: .text(value: buffer)))
+                    }
                 }
                 lastTagIndex = index
                 state = .lookingForTagName(name: "")
             } else if char == "\n" {
                 if !buffer.isEmpty {
-                    nodes.append(.init(depth: currentDepth, content: .text(value: buffer)))
+                    if dataState != nil {
+                        nodes.append(.init(depth: currentDepth, content: .data(value: buffer)))
+                    } else {
+                        nodes.append(.init(depth: currentDepth, content: .text(value: buffer)))
+                    }
                 }
                 nodes.append(.init(depth: currentDepth, content: .newLine))
                 lastTagIndex = index
@@ -97,7 +105,7 @@ final class SimpleHtmlParser {
             if name.isEmpty, char == "/" {
                 state = .lookingForClosingTagName(name: "")
             } else if !name.isEmpty, char == ">" {
-                appendTag(.openingTag(name: name, attributes: AttributeStorage()))
+                appendTag(.openingTag(name: name, attributes: AttributeStorage()), till: index)
             } else if isAllowedInTags(char) {
                 state = .lookingForTagName(name: name+String(char))
             } else if char == " ", !name.isEmpty {
@@ -111,7 +119,7 @@ final class SimpleHtmlParser {
             } else if char == "/" {
                 state = .lookingForVoidTagEnd(tag: tag, attributes: attributes)
             } else if char == ">" {
-                appendTag(.openingTag(name: tag, attributes: AttributeStorage.from(attributes: attributes)))
+                appendTag(.openingTag(name: tag, attributes: AttributeStorage.from(attributes: attributes)), till: index)
             } else if !["\"", "'", "="].contains(char), !isControlCharacter(char) {
                 state = .lookingForAttributeName(tag: tag, attributes: attributes, key: String(char))
             } else {
@@ -126,7 +134,7 @@ final class SimpleHtmlParser {
                 state = .lookingForText(buffer: "")
                 var newAttributes = attributes
                 newAttributes[key] = ""
-                appendTag(.openingTag(name: tag, attributes: AttributeStorage.from(attributes: newAttributes)))
+                appendTag(.openingTag(name: tag, attributes: AttributeStorage.from(attributes: newAttributes)), till: index)
             } else if char == "/" {
                 var newAttributes = attributes
                 newAttributes[key] = ""
@@ -145,7 +153,7 @@ final class SimpleHtmlParser {
                 state = .lookingForText(buffer: "")
                 var newAttributes = attributes
                 newAttributes[key] = ""
-                appendTag(.openingTag(name: tag, attributes: AttributeStorage.from(attributes: newAttributes)))
+                appendTag(.openingTag(name: tag, attributes: AttributeStorage.from(attributes: newAttributes)), till: index)
             } else if char == "/" {
                 var newAttributes = attributes
                 newAttributes[key] = ""
@@ -203,7 +211,7 @@ final class SimpleHtmlParser {
             } else if char == ">", case .none = wrapper, !value.isEmpty {
                 var newAttributes = attributes
                 newAttributes[key] = value
-                appendTag(.openingTag(name: tag, attributes: AttributeStorage.from(attributes: newAttributes)))
+                appendTag(.openingTag(name: tag, attributes: AttributeStorage.from(attributes: newAttributes)), till: index)
             } else if char == "/", case .none = wrapper, !value.isEmpty {
                 var newAttributes = attributes
                 newAttributes[key] = value
@@ -215,7 +223,7 @@ final class SimpleHtmlParser {
             }
         case .lookingForVoidTagEnd(let tag, let attributes):
             if char == ">" {
-                appendTag(.voidTag(name: tag, attributes: AttributeStorage.from(attributes: attributes)))
+                appendTag(.voidTag(name: tag, attributes: AttributeStorage.from(attributes: attributes)), till: index)
             } else {
                 cancelTag(till: index)
             }
@@ -223,7 +231,7 @@ final class SimpleHtmlParser {
             if char == " ", !name.isEmpty {
                 state = .lookingForClosingTagEnd(name: name)
             } else if char == ">", !name.isEmpty {
-                appendTag(.closingTag(name: name))
+                appendTag(.closingTag(name: name), till: index)
             } else if isAllowedInTags(char) {
                 state = .lookingForClosingTagName(name: name+String(char))
             } else {
@@ -233,7 +241,7 @@ final class SimpleHtmlParser {
             if char == " " {
                 state = .lookingForClosingTagEnd(name: name)
             } else if char == ">" {
-                appendTag(.closingTag(name: name))
+                appendTag(.closingTag(name: name), till: index)
             } else {
                 cancelTag(till: index)
             }
@@ -367,24 +375,82 @@ final class SimpleHtmlParser {
         }
     }
     
-    func appendTag(_ tag: AST.TagType) {
+    func appendTag(_ tag: AST.TagType, till index: String.Index) {
         switch tag {
-        case .openingTag:
-            state = .lookingForText(buffer: "")
-            nodes.append(.init(depth: currentDepth, content: .tag(value: tag)))
-            currentDepth += 1
-            lastTagIndex = nil
+        case let .openingTag(name: name, _):
+            switch dataState {
+            case .script(let depth):
+                if name == "script" {
+                    state = .lookingForText(buffer: "")
+                    nodes.append(.init(depth: currentDepth, content: .tag(value: tag)))
+                    currentDepth += 1
+                    lastTagIndex = nil
+                    dataState = .script(depth: depth+1)
+                } else {
+                    cancelTag(till: index)
+                }
+            case .style:
+                cancelTag(till: index)
+            case nil:
+                state = .lookingForText(buffer: "")
+                nodes.append(.init(depth: currentDepth, content: .tag(value: tag)))
+                currentDepth += 1
+                lastTagIndex = nil
+                if name == "script" {
+                    dataState = .script(depth: 1)
+                } else if name == "style" {
+                    dataState = .style
+                }
+            }
+            
         case .voidTag:
-            nodes.append(.init(depth: currentDepth, content: .tag(value: tag)))
-            state = .lookingForText(buffer: "")
-            // Do not change the current depth as this is the void tag
-            lastTagIndex = nil
+            switch dataState {
+            case .script:
+                cancelTag(till: index)
+            case .style:
+                cancelTag(till: index)
+            case nil:
+                nodes.append(.init(depth: currentDepth, content: .tag(value: tag)))
+                state = .lookingForText(buffer: "")
+                // Do not change the current depth as this is the void tag
+                lastTagIndex = nil
+            }
         case .closingTag(let name):
-            voidUnmatchedOpeningTags(for: name)
-            currentDepth -= 1
-            lastTagIndex = nil
-            nodes.append(.init(depth: currentDepth, content: .tag(value: tag)))
-            state = .lookingForText(buffer: "")
+            switch dataState {
+            case .script(let depth):
+                if name == "script" {
+                    voidUnmatchedOpeningTags(for: name)
+                    currentDepth -= 1
+                    lastTagIndex = nil
+                    nodes.append(.init(depth: currentDepth, content: .tag(value: tag)))
+                    state = .lookingForText(buffer: "")
+                    
+                    if depth > 1 {
+                        dataState = .script(depth: depth-1)
+                    } else {
+                        dataState = nil
+                    }
+                } else {
+                    cancelTag(till: index)
+                }
+            case .style:
+                if name == "style" {
+                    voidUnmatchedOpeningTags(for: name)
+                    currentDepth -= 1
+                    lastTagIndex = nil
+                    nodes.append(.init(depth: currentDepth, content: .tag(value: tag)))
+                    state = .lookingForText(buffer: "")
+                    dataState = nil
+                } else {
+                    cancelTag(till: index)
+                }
+            case nil:
+                voidUnmatchedOpeningTags(for: name)
+                currentDepth -= 1
+                lastTagIndex = nil
+                nodes.append(.init(depth: currentDepth, content: .tag(value: tag)))
+                state = .lookingForText(buffer: "")
+            }
         }
     }
 }
