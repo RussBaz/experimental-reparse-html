@@ -8,6 +8,14 @@ public final class AttributeStorage {
     }
 
     var attributes: [String: AttributeValue] = [:]
+    
+    func copy() -> AttributeStorage {
+        let storage = AttributeStorage()
+        for (key, value) in attributes {
+            storage.attributes[key] = value
+        }
+        return storage
+    }
 
     static func from(element: Node) -> AttributeStorage {
         let storage = AttributeStorage()

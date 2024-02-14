@@ -17,7 +17,7 @@ public indirect enum AST {
 
     public enum TagType {
         case openingTag(name: String, attributes: AttributeStorage)
-        case selfClosingTag(name: String, attributes: AttributeStorage)
+        case voidTag(name: String, attributes: AttributeStorage)
         case closingTag(name: String)
     }
 
@@ -73,18 +73,58 @@ extension AST.TagType {
             .closingTag(name: name)
         } else {
             if tag.isSelfClosing() {
-                .selfClosingTag(name: name, attributes: AttributeStorage.from(element: element))
+                .voidTag(name: name, attributes: AttributeStorage.from(element: element))
             } else {
                 .openingTag(name: name, attributes: AttributeStorage.from(element: element))
             }
         }
     }
-
-    var isClosing: Bool { if case .closingTag = self {
-        true
-    } else {
-        false
-    }}
+    
+    var name: String {
+        switch self {
+        case .openingTag(let name, _):
+            name
+        case .voidTag(let name, _):
+            name
+        case .closingTag(let name):
+            name
+        }
+    }
+    
+    var attributes: AttributeStorage? {
+        switch self {
+        case .openingTag(_, let attributes):
+            attributes.copy()
+        case .voidTag(_, let attributes):
+            attributes.copy()
+        case .closingTag(_):
+            nil
+        }
+    }
+    
+    var isOpening: Bool {
+        if case .openingTag = self {
+            true
+        } else {
+            false
+        }
+    }
+    
+    var isClosing: Bool {
+        if case .closingTag = self {
+            true
+        } else {
+            false
+        }
+    }
+    
+    var isVoid: Bool {
+        if case .voidTag = self {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 public extension AST.Content {
@@ -126,7 +166,7 @@ public extension AST.TagType {
         switch self {
         case .openingTag(let name, let attributes):
             "<\(name)\(attributes)>"
-        case .selfClosingTag(let name, let attributes):
+        case .voidTag(let name, let attributes):
             "<\(name)\(attributes)/>"
         case .closingTag(let name):
             "</\(name)>"
