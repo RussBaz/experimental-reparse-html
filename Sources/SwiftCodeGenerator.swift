@@ -49,25 +49,52 @@ public final class SwiftCodeGenerator: CodeGenerator {
                 }
                 if !tmp.isEmpty {
                     main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\"\"")
-                    tmp.forEach { main.append($0) }
+                    main.append(contentsOf: tmp)
                     main.append("\(String(repeating: "    ", count: indentation))\"\"\")")
                 }
 
-            case .slotDeclaration:
-                ()
-            case .slotCommand:
-                ()
+            case let .slotDeclaration(name: name, defaults: contents):
+                if contents.isEmpty {
+                    main.append("\(String(repeating: "    ", count: indentation))lines.declare(slot: \"\(name))\"")
+                } else {
+                    let innerGenerator = SwiftCodeGenerator()
+                    innerGenerator.load(from: contents)
+                    let lines = innerGenerator.generateText(at: indentation + 1)
+                    innerGenerator.copyInnerVariables(into: self)
+                    main.append("\(String(repeating: "    ", count: indentation))lines.declare(slot: \"\(name)\") {")
+                    main.append(lines)
+                    main.append("\(String(repeating: "    ", count: indentation))}")
+                }
+            case let .slotCommand(type: type, contents: contents):
+                let innerGenerator = SwiftCodeGenerator()
+                innerGenerator.load(from: contents)
+                let lines = innerGenerator.generateText(at: indentation + 1)
+                innerGenerator.copyInnerVariables(into: self)
+                switch type {
+                case let .add(name: name):
+                    main.append("\(String(repeating: "    ", count: indentation))lines.add(slot: \"\(name)\") { lines in")
+                    main.append(lines)
+                    main.append("\(String(repeating: "    ", count: indentation))}")
+                case let .replace(name: name):
+                    main.append("\(String(repeating: "    ", count: indentation))lines.replace(slot: \"\(name)\") { lines in")
+                    main.append(lines)
+                    main.append("\(String(repeating: "    ", count: indentation))}")
+                }
             case let .include(name, contents):
                 let name = ReparseHtml.splitFilenameIntoComponents(name)
                 if !name.isEmpty {
-                    let name = name.joined(separator: ".")
+                    let name = "Pages.\(name.joined(separator: "."))"
                     includes.append(name)
-                    if !contents.values.isEmpty {
+                    if contents.isEmpty {
+                        main.append("\(String(repeating: "    ", count: indentation))lines.include(\(name).include())")
+                    } else {
                         let innerGenerator = SwiftCodeGenerator()
                         innerGenerator.load(from: contents)
                         let lines = innerGenerator.generateText(at: indentation + 1)
                         innerGenerator.copyInnerVariables(into: self)
+                        main.append("\(String(repeating: "    ", count: indentation))lines.include(\(name).include()) { lines in")
                         main.append(lines)
+                        main.append("\(String(repeating: "    ", count: indentation))}")
                     }
                 }
             case let .conditional(name, check, type, contents):
@@ -102,10 +129,76 @@ public final class SwiftCodeGenerator: CodeGenerator {
                 main.append(lines)
                 main.append("\(String(repeating: "    ", count: indentation))}")
                 main.append("\(String(repeating: "    ", count: indentation))\(name) = if \(forEvery).isEmpty { false } else { true }")
-            case .modifiers:
-                ()
+            case let .modifiers(applying: modifiers, tag: tag):
+                let attributes = (tag.attributes ?? AttributeStorage()).codeString(at: indentation)
+                main.append(attributes)
+                for modifier in modifiers {
+                    switch modifier {
+                    case let .append(name: name, value: value, condition: condition):
+                        if let condition {
+                            let cn = condition.name ?? "previousUnnamedIfTaken"
+                            switch condition.type {
+                            case .ifType:
+                                main.append("\(String(repeating: "    ", count: indentation))if \(condition.check) {")
+                            case .elseIfType:
+                                main.append("\(String(repeating: "    ", count: indentation))if !\(cn), \(condition.check) {")
+                            case .elseType:
+                                main.append("\(String(repeating: "    ", count: indentation))if !\(cn) {")
+                            }
+                            main.append("\(String(repeating: "    ", count: indentation + 1))attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: false)")
+                            main.append("\(String(repeating: "    ", count: indentation + 1))\(name) = true")
+                            main.append("\(String(repeating: "    ", count: indentation))}")
+                        } else {
+                            main.append("\(String(repeating: "    ", count: indentation))attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: false)")
+                        }
+                    case let .replace(name: name, value: value, condition: condition):
+                        if let condition {
+                            let cn = condition.name ?? "previousUnnamedIfTaken"
+                            switch condition.type {
+                            case .ifType:
+                                main.append("\(String(repeating: "    ", count: indentation))if \(condition.check) {")
+                            case .elseIfType:
+                                main.append("\(String(repeating: "    ", count: indentation))if !\(cn), \(condition.check) {")
+                            case .elseType:
+                                main.append("\(String(repeating: "    ", count: indentation))if !\(cn) {")
+                            }
+                            main.append("\(String(repeating: "    ", count: indentation + 1))attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: true)")
+                            main.append("\(String(repeating: "    ", count: indentation + 1))\(name) = true")
+                            main.append("\(String(repeating: "    ", count: indentation))}")
+                        } else {
+                            main.append("\(String(repeating: "    ", count: indentation))attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: true)")
+                        }
+                    case let .remove(name: name, condition: condition):
+                        if let condition {
+                            let cn = condition.name ?? "previousUnnamedIfTaken"
+                            switch condition.type {
+                            case .ifType:
+                                main.append("\(String(repeating: "    ", count: indentation))if \(condition.check) {")
+                            case .elseIfType:
+                                main.append("\(String(repeating: "    ", count: indentation))if !\(cn), \(condition.check) {")
+                            case .elseType:
+                                main.append("\(String(repeating: "    ", count: indentation))if !\(cn) {")
+                            }
+                            main.append("\(String(repeating: "    ", count: indentation + 1))attributes.remove(\"\(name)\")")
+                            main.append("\(String(repeating: "    ", count: indentation + 1))\(name) = true")
+                            main.append("\(String(repeating: "    ", count: indentation))}")
+                        } else {
+                            main.append("\(String(repeating: "    ", count: indentation))attributes.remove(\"\(name)\")")
+                        }
+                    }
+                }
+
+                let newTag = switch tag {
+                case let .openingTag(name, _):
+                    "\(String(repeating: "    ", count: indentation))lines.append(\"<\(name)\\(attributes)>\")"
+                case let .voidTag(name, _):
+                    "\(String(repeating: "    ", count: indentation))lines.append(\"<\(name)\\(attributes)/>\")"
+                case .closingTag:
+                    "\(String(repeating: "    ", count: indentation))// Error: Impossible tag type"
+                }
+                main.append(newTag)
             case let .eval(line):
-                main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(\(line))\")")
+                main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(\(line.trimmingCharacters(in: .whitespacesAndNewlines)))\")")
             case let .value(of):
                 main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(\(of))\")")
             case let .assignment(name, line):

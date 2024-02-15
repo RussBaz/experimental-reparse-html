@@ -64,10 +64,20 @@ public final class ASTStorage {
     func popLast() -> AST? {
         values.popLast()
     }
+
+    var isEmpty: Bool {
+        values.isEmpty || values.count == 1 && values[0] == .endOfBranch
+    }
 }
 
 extension ASTStorage: CustomStringConvertible {
     public var description: String {
         "[\(values.map { "\($0)" }.joined(separator: "\n\n"))]"
+    }
+}
+
+extension ASTStorage: Equatable {
+    public static func == (lhs: ASTStorage, rhs: ASTStorage) -> Bool {
+        lhs.values == rhs.values
     }
 }

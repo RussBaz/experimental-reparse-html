@@ -65,21 +65,6 @@ public indirect enum AST {
 }
 
 extension AST.TagType {
-    static func from(element: Element, closing: Bool = false) -> Self {
-        let tag = element.tag()
-        let name = tag.getName()
-
-        return if closing {
-            .closingTag(name: name)
-        } else {
-            if tag.isSelfClosing() {
-                .voidTag(name: name, attributes: AttributeStorage.from(element: element))
-            } else {
-                .openingTag(name: name, attributes: AttributeStorage.from(element: element))
-            }
-        }
-    }
-
     var name: String {
         switch self {
         case let .openingTag(name, _):
@@ -246,3 +231,17 @@ extension AST.Contents: CustomStringConvertible {
         return "[\n\(buffer.joined(separator: "\n"))\n]"
     }
 }
+
+extension AST: Equatable {}
+extension AST.TagType: Equatable {}
+extension AST.Content: Equatable {}
+extension AST.Contents: Equatable {
+    public static func == (lhs: AST.Contents, rhs: AST.Contents) -> Bool {
+        lhs.values == rhs.values
+    }
+}
+
+extension AST.ConditionType: Equatable {}
+extension AST.AttributeCondition: Equatable {}
+extension AST.AttributeModifier: Equatable {}
+extension AST.SlotCommandType: Equatable {}

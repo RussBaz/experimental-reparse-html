@@ -37,22 +37,11 @@ struct ReparseHtml: ParsableCommand {
         if let contents = try? String(contentsOfFile: "\(location.path)/test.html") {
             if let storage = Parser.parse(html: contents) {
                 print("Node count: \(storage.values.count)")
-//                let generator = SwiftCodeGenerator()
-//                generator.load(from: storage)
-//                let result = generator.generateText(at: 1)
+                let generator = SwiftCodeGenerator()
+                generator.load(from: storage)
+                let result = generator.generateText(at: 1)
 
-//                print("Text:\n\(result)")
-                for node in storage.values {
-                    switch node {
-                    case let .constant(contents):
-                        print("\nConstant ->")
-                        for c in contents.values {
-                            print(": \(c)")
-                        }
-                    default:
-                        print("\nNode -> \(node)")
-                    }
-                }
+                print("Text:\n\(result)")
             } else {
                 print("Could not parse the file.")
             }

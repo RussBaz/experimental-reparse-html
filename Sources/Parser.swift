@@ -27,7 +27,7 @@ final class Parser {
         case let .data(value):
             append(text: value)
         case .newLine:
-            append(text: "/n")
+            append(text: "\n")
         }
 
         if leaving {
