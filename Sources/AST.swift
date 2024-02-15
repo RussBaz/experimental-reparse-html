@@ -50,15 +50,14 @@ public indirect enum AST {
         let check: String
         let name: String?
     }
-    
+
     public class Contents {
-        
         var values: [Content] = []
-        
+
         init(_ values: [Content] = []) {
             self.values = values
         }
-        
+
         var isEmpty: Bool {
             values.isEmpty || values.allSatisfy(\.isEmpty)
         }
@@ -80,29 +79,29 @@ extension AST.TagType {
             }
         }
     }
-    
+
     var name: String {
         switch self {
-        case .openingTag(let name, _):
+        case let .openingTag(name, _):
             name
-        case .voidTag(let name, _):
+        case let .voidTag(name, _):
             name
-        case .closingTag(let name):
+        case let .closingTag(name):
             name
         }
     }
-    
+
     var attributes: AttributeStorage? {
         switch self {
-        case .openingTag(_, let attributes):
-            attributes.copy()
-        case .voidTag(_, let attributes):
-            attributes.copy()
-        case .closingTag(_):
+        case let .openingTag(_, attributes):
+            attributes
+        case let .voidTag(_, attributes):
+            attributes
+        case .closingTag:
             nil
         }
     }
-    
+
     var isOpening: Bool {
         if case .openingTag = self {
             true
@@ -110,7 +109,7 @@ extension AST.TagType {
             false
         }
     }
-    
+
     var isClosing: Bool {
         if case .closingTag = self {
             true
@@ -118,7 +117,7 @@ extension AST.TagType {
             false
         }
     }
-    
+
     var isVoid: Bool {
         if case .voidTag = self {
             true
@@ -141,17 +140,17 @@ public extension AST.Content {
             true
         }
     }
-    
+
     func text() -> String {
         switch self {
-        case .tag(value: let value):
-            return value.text()
-        case .text(value: let value):
-            return value
-        case .data(value: let value):
-            return value
+        case let .tag(value: value):
+            value.text()
+        case let .text(value: value):
+            value
+        case let .data(value: value):
+            value
         case .newLine:
-            return "\n"
+            "\n"
         }
     }
 }
@@ -169,13 +168,17 @@ public extension AST {
 public extension AST.TagType {
     func text() -> String {
         switch self {
-        case .openingTag(let name, let attributes):
+        case let .openingTag(name, attributes):
             "<\(name)\(attributes)>"
-        case .voidTag(let name, let attributes):
+        case let .voidTag(name, attributes):
             "<\(name)\(attributes)/>"
-        case .closingTag(let name):
+        case let .closingTag(name):
             "</\(name)>"
         }
+    }
+
+    var isControl: Bool {
+        ["r-include", "r-set", "r-unset", "r-var", "r-value", "r-eval", "r-slot", "r-block", "r-index", "r-item"].contains(name)
     }
 }
 
@@ -183,7 +186,7 @@ extension AST.Contents {
     struct ContentsStringIterator: Sequence, IteratorProtocol {
         var current = 0
         let data: AST.Contents
-        
+
         mutating func next() -> String? {
             guard !data.isEmpty else {
                 return nil
@@ -191,16 +194,16 @@ extension AST.Contents {
             guard current < data.values.count, current >= 0 else {
                 return nil
             }
-            
+
             let previousIndex: Int? = if current > 0 { current - 1 } else { nil }
-            let nextIndex: Int? = if current < data.values.count-1 { current + 1 } else { nil }
-            
+            let nextIndex: Int? = if current < data.values.count - 1 { current + 1 } else { nil }
+
             let previousItem: AST.Content? = if let previousIndex { data.values[previousIndex] } else { nil }
             let currentItem = data.values[current]
             let nextItem: AST.Content? = if let nextIndex { data.values[nextIndex] } else { nil }
-            
+
             current += 1
-            
+
             guard let previousItem, let nextItem else {
                 if currentItem.isEmpty {
                     return "\n"
@@ -209,12 +212,12 @@ extension AST.Contents {
                     return r
                 }
             }
-            
+
             if case .tag(.openingTag) = previousItem, case .tag(.closingTag) = nextItem {
                 let r = currentItem.text()
                 return r
             }
-            
+
             if currentItem.isEmpty {
                 return "\n"
             } else {
@@ -223,8 +226,23 @@ extension AST.Contents {
             }
         }
     }
-    
+
     var lines: ContentsStringIterator {
         ContentsStringIterator(data: self)
+    }
+}
+
+extension AST.Contents: CustomStringConvertible {
+    public var description: String {
+        var buffer: [String] = []
+        for item in lines {
+            if item == "\n" {
+                buffer.append("")
+            } else {
+                buffer.append(">> \(item)")
+            }
+        }
+
+        return "[\n\(buffer.joined(separator: "\n"))\n]"
     }
 }

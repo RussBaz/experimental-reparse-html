@@ -35,44 +35,27 @@ struct ReparseHtml: ParsableCommand {
         print("Looking for file at: \(location.path)/test.html")
 
         if let contents = try? String(contentsOfFile: "\(location.path)/test.html") {
-            let storage = SimpleHtmlParser(input: contents)
-            storage.parse()
-            
-            for node in storage.nodes {
-                let content = node.content
-                switch content {
-                case .tag(value: let value):
-                    print("Tag -> \(value.text())")
-                case .text(value: let value):
-                    print("Text -> \"\(value)\"")
-                case .data(value: let value):
-                    print("Data -> \"\(value)\"")
-                case .newLine:
-                    print("New Line")
-                }
-            }
-            
-//            if let storage = try? NewParser.parse(html: contents) {
-//                print("Node count: \(storage.values.count)")
+            if let storage = Parser.parse(html: contents) {
+                print("Node count: \(storage.values.count)")
 //                let generator = SwiftCodeGenerator()
 //                generator.load(from: storage)
 //                let result = generator.generateText(at: 1)
-//                
+
 //                print("Text:\n\(result)")
-////                for node in ast.values {
-////                    switch node {
-////                    case let .constant(contents):
-////                        print("\nConstant ->")
-////                        for c in contents.values {
-////                            print(": \(c)")
-////                        }
-////                    default:
-////                        print("\nNode -> \(node)")
-////                    }
-////                }
-//            } else {
-//                print("Could not parse the file.")
-//            }
+                for node in storage.values {
+                    switch node {
+                    case let .constant(contents):
+                        print("\nConstant ->")
+                        for c in contents.values {
+                            print(": \(c)")
+                        }
+                    default:
+                        print("\nNode -> \(node)")
+                    }
+                }
+            } else {
+                print("Could not parse the file.")
+            }
         } else {
             print("File not found.")
         }
@@ -131,6 +114,6 @@ struct ReparseHtml: ParsableCommand {
             r[r.startIndex] = "Index"
         }
 
-        return r.map(String.init).map( { $0.capitalized } )
+        return r.map(String.init).map(\.capitalized)
     }
 }

@@ -1,108 +1,80 @@
 import Foundation
 import SwiftSoup
 
-final class NewParser: NodeVisitor {
+final class Parser {
     let ast = ASTStorage()
     var closeDepth: [Int: Int] = [:]
     var ignoringUntilDepth: Int?
+    var nestedEvalMode = false
 
-    func head(_ node: Node, _ depth: Int) throws {
+    func parseNode(_ content: AST.Content, at depth: Int, leaving: Bool) {
+        if let ignoring = ignoringUntilDepth, ignoring <= depth {
+            ignoringUntilDepth = nil
+        }
+
         guard ignoringUntilDepth == nil else { return }
 
-        if let node = node as? TextNode {
-            openTag(node)
-        } else if let node = node as? Element {
-            if let controlAttrs = ControlAttrs.new(from: node) {
-                if let conditional = isConditional(controlAttrs), let branch = ast.getCurrentBranch() {
-                    closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
-                    branch.append(node: conditional)
-                }
-
-                if let loop = isLoop(controlAttrs), let branch = ast.getCurrentBranch() {
-                    closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
-                    branch.append(node: loop)
-                }
-
-                if let slotControl = isSlotCommand(controlAttrs), let branch = ast.getCurrentBranch() {
-                    closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
-                    branch.append(node: slotControl)
-                }
-            }
-
-            switch node.tagName() {
-            case "r-include":
-                openIncludeTag(node)
-            case "r-set":
-                openSetTag(node, depth: depth)
-            case "r-unset":
-                openUnsetTag(node, depth: depth)
-            case "r-var":
-                openVarTag(node, depth: depth)
-            case "r-value":
-                openValueTag(node, depth: depth)
-            case "r-eval":
-                openEvalTag(node, depth: depth)
-            case "r-slot":
-                openSlotTag(node)
-            case "r-block":
-                openBlockTag(node)
-            case "r-index":
-                openIndexTag(node, depth: depth)
-            case "r-item":
-                openItemTag(node, depth: depth)
-            default:
-                openTag(node)
-            }
-        } else if let node = node as? DataNode {
-            openTag(node)
-        } else {
-            print("Error - unreachable node reached on tag entry: \(node)")
-        }
-    }
-
-    func tail(_ node: Node, _ depth: Int) throws {
-        guard ignoringUntilDepth == nil else {
-            if ignoringUntilDepth! <= depth {
-                ignoringUntilDepth = nil
-            }
+        guard !nestedEvalMode else {
+            append(eval: content)
             return
         }
 
-        if let node = node as? TextNode {
-            closeTag(node)
-        } else if let node = node as? Element {
-            closeTag(node)
-        } else if let node = node as? DataNode {
-            closeTag(node)
-        } else {
-            print("Error - unreachable node reached on tag exit: \(node)")
+        switch content {
+        case let .tag(value):
+            append(tag: value, at: depth)
+        case let .text(value):
+            append(text: value)
+        case let .data(value):
+            append(text: value)
+        case .newLine:
+            append(text: "/n")
         }
 
-        closeInnerASTs(for: depth)
+        if leaving {
+            closeInnerASTs(for: depth)
+        }
     }
 
-    static func parse(html root: Element) throws -> ASTStorage {
-        let parser = NewParser()
+    static func parse(html root: SimpleHtmlParser) -> ASTStorage? {
+        let parser = Parser()
+        var previousDepth = 0
 
-        for node in root.getChildNodes() {
-            try node.traverse(parser)
+        var previousNode: AST.Content?
+        var secondPreviousNode: AST.Content?
+
+        for node in root.nodes {
+            let leaving = node.depth < previousDepth
+            let content = node.content
+            if content.isEmpty, case let .tag(value) = previousNode, let secondPreviousNode, secondPreviousNode.isEmpty {
+                if content.text() == secondPreviousNode.text(), value.isControl {
+                    ()
+                } else {
+                    parser.parseNode(node.content, at: node.depth, leaving: leaving)
+                }
+            } else {
+                parser.parseNode(node.content, at: node.depth, leaving: leaving)
+            }
+
+            previousDepth = node.depth
+            secondPreviousNode = previousNode
+            previousNode = content
         }
-        
+
         let result = parser.ast
         result.closeBranch()
-        
+
         return result
     }
 
-    static func parse(html text: String) throws -> ASTStorage? {
-        let doc = try SwiftSoup.parseBodyFragment(text)
-        guard let body = doc.body() else { return nil }
+    static func parse(html text: String) -> ASTStorage? {
+        let parser = SimpleHtmlParser(input: text)
+        parser.parse()
 
-        return try parse(html: body)
+        return parse(html: parser)
     }
 }
 
-extension NewParser {
+extension Parser {
     struct ControlAttrs {
         let ifLine: String?
         let ifElseLine: String?
@@ -112,7 +84,7 @@ extension NewParser {
         let addToSlotLine: String?
         let replaceSlotLine: String?
 
-        static func new(from e: Element) -> ControlAttrs? {
+        static func new(from e: AST.TagType) -> ControlAttrs? {
             var ifLine: String?
             var ifElseLine: String?
             var elseLine = false
@@ -121,36 +93,49 @@ extension NewParser {
             var addToSlotLine: String?
             var replaceSlotLine: String?
 
-            let tagName = e.tagName()
+            let name: String
+            let attributes: AttributeStorage
 
-            guard tagName != "r-set", tagName != "r-unset" else { return nil }
-
-            if e.hasAttr("r-if"), let v = try? e.attr("r-if"), let _ = try? e.removeAttr("r-if") {
-                ifLine = v
+            switch e {
+            case let .openingTag(n, a):
+                name = n
+                attributes = a
+            case let .voidTag(n, a):
+                name = n
+                attributes = a
+            case let .closingTag(n):
+                name = n
+                attributes = AttributeStorage()
             }
 
-            if e.hasAttr("r-else-if"), let v = try? e.attr("r-else-if"), let _ = try? e.removeAttr("r-else-if") {
-                ifElseLine = v
+            guard name != "r-set", name != "r-unset" else { return nil }
+
+            if let v = attributes.remove("r-if") {
+                ifLine = v.text
             }
 
-            if e.hasAttr("r-else"), let _ = try? e.removeAttr("r-else") {
+            if let v = attributes.remove("r-else-if") {
+                ifElseLine = v.text
+            }
+
+            if let _ = attributes.remove("r-else") {
                 elseLine = true
             }
 
-            if e.hasAttr("r-tag"), let v = try? e.attr("r-tag"), let _ = try? e.removeAttr("r-tag") {
-                tagLine = v
+            if let v = attributes.remove("r-tag") {
+                tagLine = v.text
             }
 
-            if e.hasAttr("r-for-every"), let v = try? e.attr("r-for-every"), let _ = try? e.removeAttr("r-for-every") {
-                forLine = v
+            if let v = attributes.remove("r-for-every") {
+                forLine = v.text
             }
 
-            if e.hasAttr("r-add-to-slot"), let v = try? e.attr("r-add-to-slot"), let _ = try? e.removeAttr("r-add-to-slot") {
-                addToSlotLine = v
+            if let v = attributes.remove("r-add-to-slot") {
+                addToSlotLine = v.text
             }
 
-            if e.hasAttr("r-replace-slot"), let v = try? e.attr("r-replace-slot"), let _ = try? e.removeAttr("r-replace-slot") {
-                replaceSlotLine = v
+            if let v = attributes.remove("r-replace-slot") {
+                replaceSlotLine = v.text
             }
 
             guard ifLine != nil || ifElseLine != nil || !elseLine || tagLine != nil || forLine != nil || addToSlotLine != nil || replaceSlotLine != nil else { return nil }
@@ -160,33 +145,90 @@ extension NewParser {
     }
 }
 
-extension NewParser {
-    func openTag(_ text: TextNode) {
-        guard let branch = ast.getCurrentBranch() else { return }
-        branch.appendToLastConstant(content: .text(value: text.text()))
-    }
+extension Parser {
+    func openTag(_ tag: AST.TagType, at depth: Int) {
+        guard let _ = ast.getCurrentBranch() else { return }
 
-    func openTag(_ element: Element) {
-        guard let branch = ast.getCurrentBranch() else { return }
-        let tag = AST.TagType.from(element: element)
-
-        branch.appendToLastConstant(content: .tag(value: tag))
-    }
-
-    func openTag(_ element: DataNode) {
-        guard let branch = ast.getCurrentBranch() else { return }
-
-        let tag = element.nodeName()
-
-        if tag == "#data" {
-            let data = element.getWholeData().split(separator: "\n").map(String.init)
-            for d in data {
-                branch.appendToLastConstant(content: .text(value: " "))
-                branch.appendToLastConstant(content: .text(value: d))
+        if let controlAttrs = ControlAttrs.new(from: tag) {
+            if let conditional = isConditional(controlAttrs), let branch = ast.getCurrentBranch() {
+                closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
+                branch.append(node: conditional)
             }
-            branch.appendToLastConstant(content: .text(value: " "))
-        } else {
-            branch.appendToLastConstant(content: .tag(value: .openingTag(name: tag, attributes: AttributeStorage.from(element: element))))
+
+            if let loop = isLoop(controlAttrs), let branch = ast.getCurrentBranch() {
+                closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
+                branch.append(node: loop)
+            }
+
+            if let slotControl = isSlotCommand(controlAttrs), let branch = ast.getCurrentBranch() {
+                closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
+                branch.append(node: slotControl)
+            }
+        }
+
+        switch tag.name {
+        case "r-include":
+            openIncludeTag(tag, at: depth)
+        case "r-set":
+            openSetTag(tag, at: depth)
+        case "r-unset":
+            openUnsetTag(tag, at: depth)
+        case "r-var":
+            openVarTag(tag, at: depth)
+        case "r-value":
+            openValueTag(tag, at: depth)
+        case "r-eval":
+            openEvalTag(tag, at: depth)
+        case "r-slot":
+            openSlotTag(tag, at: depth)
+        case "r-block":
+            openBlockTag(tag, at: depth)
+        case "r-index":
+            openIndexTag(tag, at: depth)
+        case "r-item":
+            openItemTag(tag, at: depth)
+        default:
+            openConstantTag(tag, at: depth)
+        }
+    }
+
+    func append(eval content: AST.Content) {
+        guard let branch = ast.getCurrentBranch() else { return }
+        guard let last = branch.popLast() else { return }
+        guard case let .eval(line) = last else {
+            branch.append(node: last)
+            return
+        }
+
+        switch content {
+        case let .tag(value):
+            if value.isClosing, value.name == "r-eval" {
+                branch.append(node: .eval(line: line))
+                nestedEvalMode = false
+            } else {
+                branch.append(node: .eval(line: line + value.text()))
+            }
+        case let .text(value):
+            branch.append(node: .eval(line: line + value))
+        case let .data(value):
+            branch.append(node: .eval(line: line + value))
+        case .newLine:
+            branch.append(node: .eval(line: line + "\n"))
+        }
+    }
+
+    func append(text: String) {
+        guard let branch = ast.getCurrentBranch() else { return }
+
+        branch.append(constant: .text(value: text))
+    }
+
+    func append(tag: AST.TagType, at depth: Int) {
+        switch tag {
+        case .openingTag, .voidTag:
+            openTag(tag, at: depth)
+        case .closingTag:
+            closeTag(tag, at: depth)
         }
     }
 
@@ -202,20 +244,11 @@ extension NewParser {
         }
     }
 
-    func closeTag(_: TextNode) {
-        // Do nothing on text
-    }
-
-    func closeTag(_ element: Element) {
+    func closeTag(_ tag: AST.TagType, at _: Int) {
         guard let branch = ast.getCurrentBranch() else { return }
+        guard tag.isClosing else { return }
 
-        let tag = element.tag()
-
-        guard !tag.isSelfClosing() else { return }
-
-        let tagName = tag.getNameNormal()
-
-        switch tagName {
+        switch tag.name {
         case "r-include":
             branch.closeBranch()
         case "r-set":
@@ -237,18 +270,8 @@ extension NewParser {
         case "r-item":
             ()
         default:
-            branch.appendToLastConstant(content: .tag(value: .closingTag(name: tagName)))
+            branch.append(constant: .tag(value: .closingTag(name: tag.name)))
         }
-    }
-
-    func closeTag(_ element: DataNode) {
-        guard let branch = ast.getCurrentBranch() else { return }
-
-        let tag = element.nodeName()
-
-        guard tag != "#data" else { return }
-
-        branch.appendToLastConstant(content: .tag(value: .closingTag(name: tag)))
     }
 
     func isConditional(_ attrs: ControlAttrs) -> AST? {
@@ -285,67 +308,36 @@ extension NewParser {
         return nil
     }
 
-    func openIncludeTag(_ element: Element) {
+    func openIncludeTag(_ tag: AST.TagType, at _: Int) {
         guard let branch = ast.getCurrentBranch() else { return }
+        guard !tag.isClosing else { return }
+        guard let attributes = tag.attributes else { return }
+        guard let name = attributes.find("name") else { return }
 
-        if element.hasAttr("name"), let name = try? element.attr("name") {
-            let storage = ASTStorage()
-            if element.tag().isSelfClosing() {
-                storage.append(node: .endOfBranch)
-            }
-            branch.append(node: .include(name: name, contents: storage))
-        } else {
-            try? element.remove()
+        let storage = ASTStorage()
+        if tag.isVoid {
+            storage.append(node: .endOfBranch)
         }
+
+        branch.append(node: .include(name: name, contents: storage))
     }
 
-    func openSetTag(_ element: Element, depth: Int) {
+    func openSetTag(_ tag: AST.TagType, at depth: Int) {
         guard let branch = ast.getCurrentBranch() else { return }
+        guard tag.isVoid else { ignoringUntilDepth = depth; return }
+        guard let attributes = tag.attributes else { return }
+        guard let name = attributes.find("name") else { return }
+        guard let attributeValue = attributes.value(of: "value") else { return }
 
-        guard element.hasAttr("name"), let name = try? element.attr("name") else {
-            if element.tag().isSelfClosing() {
-                try? element.remove()
-            } else {
-                ignoringUntilDepth = depth
-            }
-            return
-        }
+        let appending = if attributes.has("append") { true } else { false }
 
-        let attributeValue: AttributeStorage.AttributeValue = if element.hasAttr("value") {
-            if let value = try? element.attr("value") {
-                if name.starts(with: "data-"), name.count > 5 {
-                    .data(value)
-                } else {
-                    .string(value)
-                }
-            } else {
-                .flag
-            }
-        } else {
-            .flag
-        }
+        let conditionName = attributes.find("r-tag")
 
-        let appending = if element.hasAttr("append") { true } else { false }
-
-        let conditionName: String? = if element.hasAttr("r-tag") {
-            try? element.attr("r-tag")
-        } else {
-            nil
-        }
-
-        let condition: AST.AttributeCondition? = if element.hasAttr("r-if") {
-            if let check = try? element.attr("r-if") {
-                .init(type: .ifType, check: check, name: conditionName)
-            } else {
-                nil
-            }
-        } else if element.hasAttr("r-else-if") {
-            if let check = try? element.attr("r-else-if") {
-                .init(type: .ifType, check: check, name: conditionName)
-            } else {
-                nil
-            }
-        } else if element.hasAttr("r-else") {
+        let condition: AST.AttributeCondition? = if let check = attributes.find("r-if") {
+            .init(type: .ifType, check: check, name: conditionName)
+        } else if let check = attributes.find("r-else-if") {
+            .init(type: .ifType, check: check, name: conditionName)
+        } else if attributes.has("r-else") {
             .init(type: .ifType, check: "", name: conditionName)
         } else {
             nil
@@ -356,8 +348,6 @@ extension NewParser {
         } else {
             .replace(name: name, value: attributeValue, condition: condition)
         }
-
-        ignoringUntilDepth = depth
 
         if let last = branch.popLast() {
             switch last {
@@ -403,37 +393,19 @@ extension NewParser {
         }
     }
 
-    func openUnsetTag(_ element: Element, depth: Int) {
+    func openUnsetTag(_ tag: AST.TagType, at depth: Int) {
         guard let branch = ast.getCurrentBranch() else { return }
+        guard tag.isVoid else { ignoringUntilDepth = depth; return }
+        guard let attributes = tag.attributes else { return }
+        guard let name = attributes.find("name") else { return }
 
-        guard element.hasAttr("name"), let name = try? element.attr("name") else {
-            if element.tag().isSelfClosing() {
-                try? element.remove()
-            } else {
-                ignoringUntilDepth = depth
-            }
-            return
-        }
+        let conditionName = attributes.find("r-tag")
 
-        let conditionName: String? = if element.hasAttr("r-tag") {
-            try? element.attr("r-tag")
-        } else {
-            nil
-        }
-
-        let condition: AST.AttributeCondition? = if element.hasAttr("r-if") {
-            if let check = try? element.attr("r-if") {
-                .init(type: .ifType, check: check, name: conditionName)
-            } else {
-                nil
-            }
-        } else if element.hasAttr("r-else-if") {
-            if let check = try? element.attr("r-else-if") {
-                .init(type: .ifType, check: check, name: conditionName)
-            } else {
-                nil
-            }
-        } else if element.hasAttr("r-else") {
+        let condition: AST.AttributeCondition? = if let check = attributes.find("r-if") {
+            .init(type: .ifType, check: check, name: conditionName)
+        } else if let check = attributes.find("r-else-if") {
+            .init(type: .ifType, check: check, name: conditionName)
+        } else if attributes.has("r-else") {
             .init(type: .ifType, check: "", name: conditionName)
         } else {
             nil
@@ -487,100 +459,75 @@ extension NewParser {
         }
     }
 
-    func openVarTag(_ element: Element, depth: Int) {
+    func openVarTag(_ tag: AST.TagType, at depth: Int) {
         guard let branch = ast.getCurrentBranch() else { return }
-
-        guard element.hasAttr("name"), let name = try? element.attr("name") else {
-            if element.tag().isSelfClosing() {
-                try? element.remove()
-            } else {
-                ignoringUntilDepth = depth
-            }
-            return
-        }
-
-        guard element.hasAttr("line"), let line = try? element.attr("line") else {
-            if element.tag().isSelfClosing() {
-                try? element.remove()
-            } else {
-                ignoringUntilDepth = depth
-            }
-            return
-        }
+        guard tag.isVoid else { ignoringUntilDepth = depth; return }
+        guard let attributes = tag.attributes else { return }
+        guard let name = attributes.find("name") else { return }
+        guard let line = attributes.find("line") else { return }
 
         branch.append(node: .assignment(name: name, line: line))
     }
 
-    func openValueTag(_ element: Element, depth: Int) {
+    func openValueTag(_ tag: AST.TagType, at depth: Int) {
         guard let branch = ast.getCurrentBranch() else { return }
-
-        guard element.hasAttr("of"), let name = try? element.attr("of") else {
-            if element.tag().isSelfClosing() {
-                try? element.remove()
-            } else {
-                ignoringUntilDepth = depth
-            }
-            return
-        }
+        guard tag.isVoid else { ignoringUntilDepth = depth; return }
+        guard let attributes = tag.attributes else { return }
+        guard let name = attributes.find("of") else { return }
 
         branch.append(node: .value(of: name))
     }
 
-    func openEvalTag(_ element: Element, depth _: Int) {
+    func openEvalTag(_ tag: AST.TagType, at depth: Int) {
         guard let branch = ast.getCurrentBranch() else { return }
+        guard !tag.isClosing else { return }
+        guard let attributes = tag.attributes else { return }
 
-        if element.hasAttr("line"), let line = try? element.attr("line") {
+        if let line = attributes.find("line") {
             branch.append(node: .eval(line: line))
-        } else {
-            let textNodes = element.textNodes()
-
-            if let line = textNodes.first, textNodes.count == 1 {
-                branch.append(node: .eval(line: line.text()))
+            if tag.isOpening {
+                ignoringUntilDepth = depth
             }
+        } else if tag.isOpening {
+            branch.append(node: .eval(line: ""))
+            nestedEvalMode = true
         }
     }
 
-    func openSlotTag(_ element: Element) {
+    func openSlotTag(_ tag: AST.TagType, at _: Int) {
         guard let branch = ast.getCurrentBranch() else { return }
+        guard !tag.isClosing else { return }
+        guard let attributes = tag.attributes else { return }
+        guard let name = attributes.find("name") else { return }
 
-        if element.hasAttr("name"), let name = try? element.attr("name") {
-            let storage = ASTStorage()
-            if element.tag().isSelfClosing() {
-                storage.append(node: .endOfBranch)
-            }
-            branch.append(node: .slotDeclaration(name: name, defaults: storage))
-        } else {
-            try? element.remove()
+        let storage = ASTStorage()
+        if tag.isVoid {
+            storage.closeBranch()
         }
+        branch.append(node: .slotDeclaration(name: name, defaults: storage))
     }
 
-    func openBlockTag(_ element: Element) {
+    func openBlockTag(_ tag: AST.TagType, at depth: Int) {
         guard let _ = ast.getCurrentBranch() else { return }
-
-        if element.tag().isSelfClosing() {
-            try? element.remove()
-        }
+        guard tag.isOpening else { ignoringUntilDepth = depth; return }
     }
 
-    func openIndexTag(_ element: Element, depth: Int) {
+    func openIndexTag(_ tag: AST.TagType, at depth: Int) {
         guard let branch = ast.getCurrentBranch() else { return }
+        guard tag.isVoid else { ignoringUntilDepth = depth; return }
 
         branch.append(node: .index)
-
-        guard element.tag().isSelfClosing() else {
-            ignoringUntilDepth = depth
-            return
-        }
     }
 
-    func openItemTag(_ element: Element, depth: Int) {
+    func openItemTag(_ tag: AST.TagType, at depth: Int) {
         guard let branch = ast.getCurrentBranch() else { return }
+        guard tag.isVoid else { ignoringUntilDepth = depth; return }
 
         branch.append(node: .item)
+    }
 
-        guard element.tag().isSelfClosing() else {
-            ignoringUntilDepth = depth
-            return
-        }
+    func openConstantTag(_ tag: AST.TagType, at _: Int) {
+        guard let branch = ast.getCurrentBranch() else { return }
+        branch.append(constant: .tag(value: tag))
     }
 }

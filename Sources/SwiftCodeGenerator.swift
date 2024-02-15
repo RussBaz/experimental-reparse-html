@@ -4,35 +4,35 @@ public final class SwiftCodeGenerator: CodeGenerator {
         let name: String
         let label: String?
     }
-    
+
     struct VariableDef {
         let name: String
         let type: String?
     }
-        
+
     var parameters: [ParameterDef] = []
     var globalVariables: [VariableDef] = []
     var conditionTags: [String] = ["previousUnnamedIfTaken"]
     var main: [String] = []
     var includes: [String] = []
     var data: ASTStorage?
-    
+
     let heqader = """
     let lines = LineStorage()
     """
-    
+
     public func load(from storage: ASTStorage) {
-        self.data = storage
+        data = storage
     }
-    
+
     public func generateText(at indentation: Int) -> String {
         guard let data else { return "" }
-        
+
         for node in data.values {
             switch node {
-            case .constant(let contents):
+            case let .constant(contents):
                 var tmp: [String] = []
-                
+
                 var buffer = ""
                 for l in contents.lines {
                     if l == "\n" {
@@ -52,12 +52,12 @@ public final class SwiftCodeGenerator: CodeGenerator {
                     tmp.forEach { main.append($0) }
                     main.append("\(String(repeating: "    ", count: indentation))\"\"\")")
                 }
-                
-            case .slotDeclaration(let name, let defaults):
+
+            case .slotDeclaration:
                 ()
-            case .slotCommand(let type, let contents):
+            case .slotCommand:
                 ()
-            case .include(let name, let contents):
+            case let .include(name, contents):
                 let name = ReparseHtml.splitFilenameIntoComponents(name)
                 if !name.isEmpty {
                     let name = name.joined(separator: ".")
@@ -65,22 +65,22 @@ public final class SwiftCodeGenerator: CodeGenerator {
                     if !contents.values.isEmpty {
                         let innerGenerator = SwiftCodeGenerator()
                         innerGenerator.load(from: contents)
-                        let lines = innerGenerator.generateText(at: indentation+1)
+                        let lines = innerGenerator.generateText(at: indentation + 1)
                         innerGenerator.copyInnerVariables(into: self)
                         main.append(lines)
                     }
                 }
-            case .conditional(let name, let check, let type, let contents):
+            case let .conditional(name, check, type, contents):
                 let name = name ?? "previousUnnamedIfTaken"
                 let innerGenerator = SwiftCodeGenerator()
                 innerGenerator.load(from: contents)
-                let lines = innerGenerator.generateText(at: indentation+1)
+                let lines = innerGenerator.generateText(at: indentation + 1)
                 innerGenerator.copyInnerVariables(into: self)
-                
+
                 if !conditionTags.contains(name) {
                     conditionTags.append(name)
                 }
-                
+
                 switch type {
                 case .ifType:
                     main.append("\(String(repeating: "    ", count: indentation))if \(check) {")
@@ -90,25 +90,25 @@ public final class SwiftCodeGenerator: CodeGenerator {
                     main.append("\(String(repeating: "    ", count: indentation))if !\(name) {")
                 }
                 main.append(lines)
-                main.append("\(String(repeating: "    ", count: indentation+1))\(name) = true")
+                main.append("\(String(repeating: "    ", count: indentation + 1))\(name) = true")
                 main.append("\(String(repeating: "    ", count: indentation))}")
-            case .loop(let forEvery, let name, let contents):
+            case let .loop(forEvery, name, contents):
                 let name = name ?? "previousUnnamedIfTaken"
                 let innerGenerator = SwiftCodeGenerator()
                 innerGenerator.load(from: contents)
-                let lines = innerGenerator.generateText(at: indentation+1)
+                let lines = innerGenerator.generateText(at: indentation + 1)
                 innerGenerator.copyInnerVariables(into: self)
                 main.append("\(String(repeating: "    ", count: indentation))for (index, item) in \(forEvery).enumerated() {")
                 main.append(lines)
                 main.append("\(String(repeating: "    ", count: indentation))}")
                 main.append("\(String(repeating: "    ", count: indentation))\(name) = if \(forEvery).isEmpty { false } else { true }")
-            case .modifiers(let applying, let tag):
+            case .modifiers:
                 ()
-            case .eval(let line):
+            case let .eval(line):
                 main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(\(line))\")")
-            case .value(let of):
+            case let .value(of):
                 main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(\(of))\")")
-            case .assignment(let name, let line):
+            case let .assignment(name, line):
                 main.append("\(String(repeating: "    ", count: indentation))let \(name) = \(line)")
             case .index:
                 main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(index)\")")
@@ -118,10 +118,10 @@ public final class SwiftCodeGenerator: CodeGenerator {
                 ()
             }
         }
-        
+
         return main.joined(separator: "\n")
     }
-    
+
     func copyInnerVariables(into generator: SwiftCodeGenerator) {
         for i in includes {
             if !generator.includes.contains(i) {

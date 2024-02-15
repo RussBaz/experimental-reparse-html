@@ -39,7 +39,7 @@ public final class ASTStorage {
         }
     }
 
-    func appendToLastConstant(content value: AST.Content) {
+    func append(constant value: AST.Content) {
         if let last = values.popLast() {
             if case let .constant(contents) = last {
                 contents.values.append(value)
