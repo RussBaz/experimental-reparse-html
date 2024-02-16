@@ -5,28 +5,38 @@ public final class SwiftCodeGenerator: CodeGenerator {
         let label: String?
     }
 
-    struct VariableDef {
-        let name: String
-        let type: String?
-    }
-
     var parameters: [ParameterDef] = []
-    var globalVariables: [VariableDef] = []
     var conditionTags: [String] = ["previousUnnamedIfTaken"]
     var main: [String] = []
     var includes: [String] = []
     var data: ASTStorage?
 
-    let heqader = """
-    let lines = LineStorage()
-    """
-
     public func load(from storage: ASTStorage) {
         data = storage
     }
-
+    
+    func generateHeader(at indentation: Int) {
+        let signature = parameters.map({ $0.asDeclaration }).joined(separator: ", ")
+        main.append("\(String(repeating: "    ", count: indentation))func include(\(signature)) -> LineStorage {")
+        main.append("\(String(repeating: "    ", count: indentation+1))let lines = LineStorage()")
+        main.append("")
+        
+    }
+    
     public func generateText(at indentation: Int) -> String {
-        guard let data else { return "" }
+        generateHeader(at: indentation)
+        generateBody(at: indentation+1)
+        main.append("")
+        main.append("\(String(repeating: "    ", count: indentation+1))return lines")
+        main.append("\(String(repeating: "    ", count: indentation))}")
+
+        return main.joined(separator: "\n")
+    }
+
+    func generateBody(at indentation: Int) {
+        guard let data else { return }
+        
+        let includeSignature = parameters.map({ $0.asParameter }).joined(separator: ", ")
 
         for node in data.values {
             switch node {
@@ -86,7 +96,7 @@ public final class SwiftCodeGenerator: CodeGenerator {
                     let name = "Pages.\(name.joined(separator: "."))"
                     includes.append(name)
                     if contents.isEmpty {
-                        main.append("\(String(repeating: "    ", count: indentation))lines.include(\(name).include())")
+                        main.append("\(String(repeating: "    ", count: indentation))lines.include(\(name).include(\(includeSignature)))")
                     } else {
                         let innerGenerator = SwiftCodeGenerator()
                         innerGenerator.load(from: contents)
@@ -202,7 +212,7 @@ public final class SwiftCodeGenerator: CodeGenerator {
             case let .value(of):
                 main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(\(of))\")")
             case let .assignment(name, line):
-                main.append("\(String(repeating: "    ", count: indentation))let \(name) = \(line)")
+                main.append("\(String(repeating: "    ", count: indentation))var \(name) = \(line)")
             case .index:
                 main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(index)\")")
             case .item:
@@ -211,8 +221,6 @@ public final class SwiftCodeGenerator: CodeGenerator {
                 ()
             }
         }
-
-        return main.joined(separator: "\n")
     }
 
     func copyInnerVariables(into generator: SwiftCodeGenerator) {
@@ -220,6 +228,21 @@ public final class SwiftCodeGenerator: CodeGenerator {
             if !generator.includes.contains(i) {
                 generator.includes.append(i)
             }
+        }
+    }
+}
+
+extension SwiftCodeGenerator.ParameterDef {
+    var asDeclaration: String {
+        let label = if let label { "\(label) " } else { "" }
+        return "\(label)\(name): \(type)"
+    }
+    
+    var asParameter: String {
+        if let label {
+            "\(label): \(name)"
+        } else {
+            "\(name): \(name)"
         }
     }
 }
