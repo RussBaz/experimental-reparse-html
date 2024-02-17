@@ -98,10 +98,10 @@ public final class AttributeStorage {
             case .flag:
                 lines.append("\"\(key)\": .flag")
             case let .string(v):
-                lines.append("\"\(key)\": .string(\"\(v))\"")
+                lines.append("\"\(key)\": .string(\"\(v)\")")
             }
         }
-        return "\(String(repeating: "    ", count: indentation))let attributes = AttributeStorage.from(attributes: [\(lines.joined(separator: ", "))])"
+        return "\(String(repeating: "    ", count: indentation))attributes = AttributeStorage.from(attributes: [\(lines.joined(separator: ", "))])"
     }
 }
 

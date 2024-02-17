@@ -104,19 +104,21 @@ final class SimpleHtmlParser {
             // Closing Tag!
             if name.isEmpty, char == "/" {
                 state = .lookingForClosingTagName(name: "")
+            } else if name.isEmpty, char == " " || char == "\n" {
+                state = .lookingForTagName(name: name)
             } else if char == "/" {
                 state = .lookingForVoidTagEnd(tag: name, attributes: AttributeStorage())
             } else if !name.isEmpty, char == ">" {
                 appendTag(.openingTag(name: name, attributes: AttributeStorage()), till: index)
             } else if isAllowedInTags(char) {
                 state = .lookingForTagName(name: name + String(char))
-            } else if char == " ", !name.isEmpty {
+            } else if char == " " || char == "\n", !name.isEmpty {
                 state = .lookingForAttributes(tag: name, attributes: AttributeStorage())
             } else {
                 cancelTag(till: index)
             }
         case let .lookingForAttributes(tag, attributes):
-            if char == " " {
+            if char == " " || char == "\n" {
                 state = .lookingForAttributes(tag: tag, attributes: attributes)
             } else if char == "/" {
                 state = .lookingForVoidTagEnd(tag: tag, attributes: attributes)
@@ -156,7 +158,7 @@ final class SimpleHtmlParser {
             } else if char == "/" {
                 attributes.append(key: key, value: "", wrapped: false)
                 state = .lookingForVoidTagEnd(tag: tag, attributes: attributes)
-            } else if !["\"", "'"].contains(char), !isControlCharacter(char) {
+            } else if !["\"", "'"].contains(char), char == "\n" || !isControlCharacter(char) {
                 attributes.append(key: key, value: "", wrapped: false)
                 state = .lookingForAttributeName(tag: tag, attributes: attributes, key: String(char))
             } else {
@@ -220,7 +222,7 @@ final class SimpleHtmlParser {
                 cancelTag(till: index)
             }
         case let .lookingForClosingTagName(name):
-            if char == " ", !name.isEmpty {
+            if char == " " || char == "\n", !name.isEmpty {
                 state = .lookingForClosingTagEnd(name: name)
             } else if char == ">", !name.isEmpty {
                 appendTag(.closingTag(name: name), till: index)

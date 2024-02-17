@@ -1,42 +1,60 @@
-public final class SwiftCodeGenerator: CodeGenerator {
+public final class SwiftCodeGenerator {
     struct ParameterDef {
         let type: String
         let name: String
         let label: String?
     }
 
-    var parameters: [ParameterDef] = []
+    final class SwiftPageSignatures {
+        var signatures = [String: [ParameterDef]]()
+    }
+
     var conditionTags: [String] = ["previousUnnamedIfTaken"]
     var main: [String] = []
     var includes: [String] = []
-    var data: ASTStorage?
+    let data: ASTStorage?
+    let signatures: SwiftPageSignatures
+    let currentFile: String
 
-    public func load(from storage: ASTStorage) {
-        data = storage
+    init(_ name: String, for data: ASTStorage?, with signatures: SwiftPageSignatures? = nil) {
+        currentFile = name
+        self.data = data
+        self.signatures = signatures ?? SwiftPageSignatures()
     }
-    
-    func generateHeader(at indentation: Int) {
-        let signature = parameters.map({ $0.asDeclaration }).joined(separator: ", ")
-        main.append("\(String(repeating: "    ", count: indentation))func include(\(signature)) -> LineStorage {")
-        main.append("\(String(repeating: "    ", count: indentation+1))let lines = LineStorage()")
+
+    func run(at indentation: Int = 0) {
+        main = []
+
+        generateBody(at: indentation + 1)
         main.append("")
-        
-    }
-    
-    public func generateText(at indentation: Int) -> String {
+        main.append("\(indent(level: indentation + 1))return lines")
+        main.append("\(indent(level: indentation))}")
         generateHeader(at: indentation)
-        generateBody(at: indentation+1)
-        main.append("")
-        main.append("\(String(repeating: "    ", count: indentation+1))return lines")
-        main.append("\(String(repeating: "    ", count: indentation))}")
+    }
 
-        return main.joined(separator: "\n")
+    func indent(level: Int) -> String {
+        String(repeating: "    ", count: max(level, 0))
+    }
+
+    func generateHeader(at indentation: Int) {
+        let signature = signatures.parameters(of: currentFile).map(\.asDeclaration).joined(separator: ", ")
+        var tmp = [String]()
+        
+        tmp.append("\(indent(level: indentation))static func include(\(signature)) -> LineStorage {")
+        tmp.append("\(indent(level: indentation + 1))let lines = LineStorage()")
+        tmp.append("\(indent(level: indentation + 1))var attributes = AttributeStorage()")
+        for tag in conditionTags {
+            tmp.append("\(indent(level: indentation + 1))var \(tag) = false")
+        }
+        tmp.append("")
+        
+        main.insert(contentsOf: tmp, at: 0)
     }
 
     func generateBody(at indentation: Int) {
         guard let data else { return }
-        
-        let includeSignature = parameters.map({ $0.asParameter }).joined(separator: ", ")
+
+        let includeSignature = signatures.parameters(of: currentFile).map(\.asParameter).joined(separator: ", ")
 
         for node in data.values {
             switch node {
@@ -47,7 +65,7 @@ public final class SwiftCodeGenerator: CodeGenerator {
                 for l in contents.lines {
                     if l == "\n" {
                         if !buffer.isEmpty {
-                            tmp.append("\(String(repeating: "    ", count: indentation))\(buffer)")
+                            tmp.append("\(indent(level: indentation))\(buffer)")
                             buffer = ""
                         }
                     } else {
@@ -55,40 +73,38 @@ public final class SwiftCodeGenerator: CodeGenerator {
                     }
                 }
                 if !buffer.isEmpty {
-                    tmp.append("\(String(repeating: "    ", count: indentation))\(buffer)")
+                    tmp.append("\(indent(level: indentation))\(buffer)")
                 }
                 if !tmp.isEmpty {
-                    main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\"\"")
+                    main.append("\(indent(level: indentation))lines.append(\"\"\"")
                     main.append(contentsOf: tmp)
-                    main.append("\(String(repeating: "    ", count: indentation))\"\"\")")
+                    main.append("\(indent(level: indentation))\"\"\")")
                 }
 
             case let .slotDeclaration(name: name, defaults: contents):
                 if contents.isEmpty {
-                    main.append("\(String(repeating: "    ", count: indentation))lines.declare(slot: \"\(name))\"")
+                    main.append("\(indent(level: indentation))lines.declare(slot: \"\(name))\")")
                 } else {
-                    let innerGenerator = SwiftCodeGenerator()
-                    innerGenerator.load(from: contents)
-                    let lines = innerGenerator.generateText(at: indentation + 1)
+                    let innerGenerator = SwiftCodeGenerator(name, for: contents, with: signatures)
+                    innerGenerator.generateBody(at: indentation + 1)
                     innerGenerator.copyInnerVariables(into: self)
-                    main.append("\(String(repeating: "    ", count: indentation))lines.declare(slot: \"\(name)\") {")
-                    main.append(lines)
-                    main.append("\(String(repeating: "    ", count: indentation))}")
+                    main.append("\(indent(level: indentation))lines.declare(slot: \"\(name)\") { lines in")
+                    main.append(contentsOf: innerGenerator.main)
+                    main.append("\(indent(level: indentation))}")
                 }
             case let .slotCommand(type: type, contents: contents):
-                let innerGenerator = SwiftCodeGenerator()
-                innerGenerator.load(from: contents)
-                let lines = innerGenerator.generateText(at: indentation + 1)
+                let innerGenerator = SwiftCodeGenerator(currentFile, for: contents, with: signatures)
+                innerGenerator.generateBody(at: indentation + 1)
                 innerGenerator.copyInnerVariables(into: self)
                 switch type {
                 case let .add(name: name):
-                    main.append("\(String(repeating: "    ", count: indentation))lines.add(slot: \"\(name)\") { lines in")
-                    main.append(lines)
-                    main.append("\(String(repeating: "    ", count: indentation))}")
+                    main.append("\(indent(level: indentation))lines.add(slot: \"\(name)\") { lines in")
+                    main.append(contentsOf: innerGenerator.main)
+                    main.append("\(indent(level: indentation))}")
                 case let .replace(name: name):
-                    main.append("\(String(repeating: "    ", count: indentation))lines.replace(slot: \"\(name)\") { lines in")
-                    main.append(lines)
-                    main.append("\(String(repeating: "    ", count: indentation))}")
+                    main.append("\(indent(level: indentation))lines.replace(slot: \"\(name)\") { lines in")
+                    main.append(contentsOf: innerGenerator.main)
+                    main.append("\(indent(level: indentation))}")
                 }
             case let .include(name, contents):
                 let name = ReparseHtml.splitFilenameIntoComponents(name)
@@ -96,22 +112,23 @@ public final class SwiftCodeGenerator: CodeGenerator {
                     let name = "Pages.\(name.joined(separator: "."))"
                     includes.append(name)
                     if contents.isEmpty {
-                        main.append("\(String(repeating: "    ", count: indentation))lines.include(\(name).include(\(includeSignature)))")
+                        main.append("\(indent(level: indentation))lines.include(\(name).include(\(includeSignature)))")
                     } else {
-                        let innerGenerator = SwiftCodeGenerator()
-                        innerGenerator.load(from: contents)
-                        let lines = innerGenerator.generateText(at: indentation + 1)
+                        let innerGenerator = SwiftCodeGenerator(name, for: contents, with: signatures)
+                        innerGenerator.generateBody(at: indentation + 1)
                         innerGenerator.copyInnerVariables(into: self)
-                        main.append("\(String(repeating: "    ", count: indentation))lines.include(\(name).include()) { lines in")
-                        main.append(lines)
-                        main.append("\(String(repeating: "    ", count: indentation))}")
+                        main.append("\(indent(level: indentation))lines.include(\(name).include()) { lines in")
+                        main.append(contentsOf: innerGenerator.main)
+                        main.append("\(indent(level: indentation))}")
                     }
                 }
             case let .conditional(name, check, type, contents):
                 let name = name ?? "previousUnnamedIfTaken"
-                let innerGenerator = SwiftCodeGenerator()
-                innerGenerator.load(from: contents)
-                let lines = innerGenerator.generateText(at: indentation + 1)
+                if !conditionTags.contains(name) {
+                    conditionTags.append(name)
+                }
+                let innerGenerator = SwiftCodeGenerator(currentFile, for: contents, with: signatures)
+                innerGenerator.generateBody(at: indentation + 1)
                 innerGenerator.copyInnerVariables(into: self)
 
                 if !conditionTags.contains(name) {
@@ -120,25 +137,27 @@ public final class SwiftCodeGenerator: CodeGenerator {
 
                 switch type {
                 case .ifType:
-                    main.append("\(String(repeating: "    ", count: indentation))if \(check) {")
+                    main.append("\(indent(level: indentation))if \(check) {")
                 case .elseIfType:
-                    main.append("\(String(repeating: "    ", count: indentation))if !\(name), \(check) {")
+                    main.append("\(indent(level: indentation))if !\(name), \(check) {")
                 case .elseType:
-                    main.append("\(String(repeating: "    ", count: indentation))if !\(name) {")
+                    main.append("\(indent(level: indentation))if !\(name) {")
                 }
-                main.append(lines)
-                main.append("\(String(repeating: "    ", count: indentation + 1))\(name) = true")
-                main.append("\(String(repeating: "    ", count: indentation))}")
+                main.append(contentsOf: innerGenerator.main)
+                main.append("\(indent(level: indentation + 1))\(name) = true")
+                main.append("\(indent(level: indentation))}")
             case let .loop(forEvery, name, contents):
                 let name = name ?? "previousUnnamedIfTaken"
-                let innerGenerator = SwiftCodeGenerator()
-                innerGenerator.load(from: contents)
-                let lines = innerGenerator.generateText(at: indentation + 1)
+                if !conditionTags.contains(name) {
+                    conditionTags.append(name)
+                }
+                let innerGenerator = SwiftCodeGenerator(currentFile, for: contents, with: signatures)
+                innerGenerator.generateBody(at: indentation + 1)
                 innerGenerator.copyInnerVariables(into: self)
-                main.append("\(String(repeating: "    ", count: indentation))for (index, item) in \(forEvery).enumerated() {")
-                main.append(lines)
-                main.append("\(String(repeating: "    ", count: indentation))}")
-                main.append("\(String(repeating: "    ", count: indentation))\(name) = if \(forEvery).isEmpty { false } else { true }")
+                main.append("\(indent(level: indentation))for (index, item) in \(forEvery).enumerated() {")
+                main.append(contentsOf: innerGenerator.main)
+                main.append("\(indent(level: indentation))}")
+                main.append("\(indent(level: indentation))\(name) = if \(forEvery).isEmpty { false } else { true }")
             case let .modifiers(applying: modifiers, tag: tag):
                 let attributes = (tag.attributes ?? AttributeStorage()).codeString(at: indentation)
                 main.append(attributes)
@@ -147,76 +166,85 @@ public final class SwiftCodeGenerator: CodeGenerator {
                     case let .append(name: name, value: value, condition: condition):
                         if let condition {
                             let cn = condition.name ?? "previousUnnamedIfTaken"
+                            if !conditionTags.contains(cn) {
+                                conditionTags.append(cn)
+                            }
                             switch condition.type {
                             case .ifType:
-                                main.append("\(String(repeating: "    ", count: indentation))if \(condition.check) {")
+                                main.append("\(indent(level: indentation))if \(condition.check) {")
                             case .elseIfType:
-                                main.append("\(String(repeating: "    ", count: indentation))if !\(cn), \(condition.check) {")
+                                main.append("\(indent(level: indentation))if !\(cn), \(condition.check) {")
                             case .elseType:
-                                main.append("\(String(repeating: "    ", count: indentation))if !\(cn) {")
+                                main.append("\(indent(level: indentation))if !\(cn) {")
                             }
-                            main.append("\(String(repeating: "    ", count: indentation + 1))attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: false)")
-                            main.append("\(String(repeating: "    ", count: indentation + 1))\(name) = true")
-                            main.append("\(String(repeating: "    ", count: indentation))}")
+                            main.append("\(indent(level: indentation + 1))attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: false)")
+                            main.append("\(indent(level: indentation + 1))\(name) = true")
+                            main.append("\(indent(level: indentation))}")
                         } else {
-                            main.append("\(String(repeating: "    ", count: indentation))attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: false)")
+                            main.append("\(indent(level: indentation))attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: false)")
                         }
                     case let .replace(name: name, value: value, condition: condition):
                         if let condition {
                             let cn = condition.name ?? "previousUnnamedIfTaken"
+                            if !conditionTags.contains(cn) {
+                                conditionTags.append(cn)
+                            }
                             switch condition.type {
                             case .ifType:
-                                main.append("\(String(repeating: "    ", count: indentation))if \(condition.check) {")
+                                main.append("\(indent(level: indentation))if \(condition.check) {")
                             case .elseIfType:
-                                main.append("\(String(repeating: "    ", count: indentation))if !\(cn), \(condition.check) {")
+                                main.append("\(indent(level: indentation))if !\(cn), \(condition.check) {")
                             case .elseType:
-                                main.append("\(String(repeating: "    ", count: indentation))if !\(cn) {")
+                                main.append("\(indent(level: indentation))if !\(cn) {")
                             }
-                            main.append("\(String(repeating: "    ", count: indentation + 1))attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: true)")
-                            main.append("\(String(repeating: "    ", count: indentation + 1))\(name) = true")
-                            main.append("\(String(repeating: "    ", count: indentation))}")
+                            main.append("\(indent(level: indentation + 1))attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: true)")
+                            main.append("\(indent(level: indentation + 1))\(name) = true")
+                            main.append("\(indent(level: indentation))}")
                         } else {
-                            main.append("\(String(repeating: "    ", count: indentation))attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: true)")
+                            main.append("\(indent(level: indentation))attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: true)")
                         }
                     case let .remove(name: name, condition: condition):
                         if let condition {
                             let cn = condition.name ?? "previousUnnamedIfTaken"
+                            if !conditionTags.contains(cn) {
+                                conditionTags.append(cn)
+                            }
                             switch condition.type {
                             case .ifType:
-                                main.append("\(String(repeating: "    ", count: indentation))if \(condition.check) {")
+                                main.append("\(indent(level: indentation))if \(condition.check) {")
                             case .elseIfType:
-                                main.append("\(String(repeating: "    ", count: indentation))if !\(cn), \(condition.check) {")
+                                main.append("\(indent(level: indentation))if !\(cn), \(condition.check) {")
                             case .elseType:
-                                main.append("\(String(repeating: "    ", count: indentation))if !\(cn) {")
+                                main.append("\(indent(level: indentation))if !\(cn) {")
                             }
-                            main.append("\(String(repeating: "    ", count: indentation + 1))attributes.remove(\"\(name)\")")
-                            main.append("\(String(repeating: "    ", count: indentation + 1))\(name) = true")
-                            main.append("\(String(repeating: "    ", count: indentation))}")
+                            main.append("\(indent(level: indentation + 1))attributes.remove(\"\(name)\")")
+                            main.append("\(indent(level: indentation + 1))\(name) = true")
+                            main.append("\(indent(level: indentation))}")
                         } else {
-                            main.append("\(String(repeating: "    ", count: indentation))attributes.remove(\"\(name)\")")
+                            main.append("\(indent(level: indentation))attributes.remove(\"\(name)\")")
                         }
                     }
                 }
 
                 let newTag = switch tag {
                 case let .openingTag(name, _):
-                    "\(String(repeating: "    ", count: indentation))lines.append(\"<\(name)\\(attributes)>\")"
+                    "\(indent(level: indentation))lines.append(\"<\(name)\\(attributes)>\")"
                 case let .voidTag(name, _):
-                    "\(String(repeating: "    ", count: indentation))lines.append(\"<\(name)\\(attributes)/>\")"
+                    "\(indent(level: indentation))lines.append(\"<\(name)\\(attributes)/>\")"
                 case .closingTag:
-                    "\(String(repeating: "    ", count: indentation))// Error: Impossible tag type"
+                    "\(indent(level: indentation))// Error: Impossible tag type"
                 }
                 main.append(newTag)
             case let .eval(line):
-                main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(\(line.trimmingCharacters(in: .whitespacesAndNewlines)))\")")
+                main.append("\(indent(level: indentation))lines.append(\"\\(\(line.trimmingCharacters(in: .whitespacesAndNewlines)))\")")
             case let .value(of):
-                main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(\(of))\")")
+                main.append("\(indent(level: indentation))lines.append(\"\\(\(of))\")")
             case let .assignment(name, line):
-                main.append("\(String(repeating: "    ", count: indentation))var \(name) = \(line)")
+                main.append("\(indent(level: indentation))var \(name) = \(line)")
             case .index:
-                main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(index)\")")
+                main.append("\(indent(level: indentation))lines.append(\"\\(index)\")")
             case .item:
-                main.append("\(String(repeating: "    ", count: indentation))lines.append(\"\\(item)\")")
+                main.append("\(indent(level: indentation))lines.append(\"\\(item)\")")
             case .endOfBranch:
                 ()
             }
@@ -230,6 +258,10 @@ public final class SwiftCodeGenerator: CodeGenerator {
             }
         }
     }
+
+    var text: String {
+        main.joined(separator: "\n")
+    }
 }
 
 extension SwiftCodeGenerator.ParameterDef {
@@ -237,12 +269,43 @@ extension SwiftCodeGenerator.ParameterDef {
         let label = if let label { "\(label) " } else { "" }
         return "\(label)\(name): \(type)"
     }
-    
+
     var asParameter: String {
         if let label {
             "\(label): \(name)"
         } else {
             "\(name): \(name)"
         }
+    }
+}
+
+extension SwiftCodeGenerator.SwiftPageSignatures {
+    func parameters(of name: String) -> [SwiftCodeGenerator.ParameterDef] {
+        if let parameters = signatures[name] {
+            parameters
+        } else {
+            []
+        }
+    }
+
+    func append(parameter: SwiftCodeGenerator.ParameterDef, to name: String) {
+        if var parameters = signatures[name] {
+            parameters.append(parameter)
+            signatures[name] = parameters
+        } else {
+            signatures[name] = [parameter]
+        }
+    }
+
+    static func shared(for pages: [PageDef], with parameters: [SwiftCodeGenerator.ParameterDef]) -> SwiftCodeGenerator.SwiftPageSignatures {
+        let signatures = SwiftCodeGenerator.SwiftPageSignatures()
+
+        for page in pages {
+            for parameter in parameters {
+                signatures.append(parameter: parameter, to: page.name.reversed().joined(separator: "."))
+            }
+        }
+
+        return signatures
     }
 }

@@ -4,7 +4,7 @@ struct OutNode {
 }
 
 extension OutNode {
-    static func from(_ pages: [PageDef]) -> Self {
+    static func from(_ pages: [PageDef], with _: SwiftCodeGenerator.SwiftPageSignatures) -> Self {
         var root = OutNode(children: [:], pages: [])
 
         for p in pages {
@@ -41,15 +41,17 @@ extension OutNode {
         let header = """
         \(String(repeating: " ", count: offset * 4))enum \(name.capitalized) {
         """
+
         let children = children.map { c in
             c.value.build(name: c.key, offset: offset + 1)
         }
         .joined(separator: "\n\n")
 
         let renderers = pages.map { p in
-            buildPageEnum(for: p.name, at: p.path, offset: offset + 1)
+            buildPageEnum(for: p, at: offset + 1)
         }
         .joined(separator: "\n\n")
+
         let footer = """
         \(String(repeating: " ", count: offset * 4))}
         """
@@ -72,14 +74,21 @@ extension OutNode {
         return contents.replacingOccurrences(of: "\n", with: "\n\(String(repeating: " ", count: offset * 4))")
     }
 
-    func buildRenderFunc(for path: String, offset: Int = 0) -> String {
+    func buildRenderFunc(for _: String, offset: Int = 0) -> String {
         """
-        \(String(repeating: " ", count: offset * 4))static func render() -> String {
-        \(String(repeating: " ", count: offset * 4))    \"\"\"
-        \(String(repeating: " ", count: offset * 4))    \(indentContentOf(path: path, offset: offset + 1))
-        \(String(repeating: " ", count: offset * 4))    \"\"\"
-        \(String(repeating: " ", count: offset * 4))}
+        \(String(repeating: " ", count: offset * 4))// Hello Renderer!
         """
+    }
+
+    func buildIncludeFunc(for page: RendererDef, offset: Int = 0) -> String {
+        guard let contents = try? String(contentsOfFile: page.path) else { return "" }
+        guard let storage = Parser.parse(html: contents) else { return "" }
+
+        let generator = SwiftCodeGenerator(page.name, for: storage)
+
+        generator.run(at: offset + 1)
+
+        return generator.text
     }
 
     func buildPathFunc(for path: String, offset: Int = 0) -> String {
@@ -92,12 +101,12 @@ extension OutNode {
         """
     }
 
-    func buildPageEnum(for name: String, at path: String, offset: Int = 0) -> String {
+    func buildPageEnum(for page: RendererDef, at offset: Int = 0) -> String {
         """
-        \(String(repeating: " ", count: offset * 4))enum \(name.capitalized) {
-        \(buildPathFunc(for: path, offset: offset + 1))
-
-        \(buildRenderFunc(for: path, offset: offset + 1))
+        \(String(repeating: " ", count: offset * 4))enum \(page.name.capitalized) {
+        \(buildPathFunc(for: page.path, offset: offset + 1))
+        \(buildRenderFunc(for: page.path, offset: offset + 1))
+        \(buildIncludeFunc(for: page, offset: offset))
         \(String(repeating: " ", count: offset * 4))}
         """
     }

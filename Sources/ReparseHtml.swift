@@ -23,31 +23,23 @@ struct ReparseHtml: ParsableCommand {
     @Argument(help: "The target data folder location.", transform: URL.init(fileURLWithPath:))
     var location: URL
 
+    @Argument(help: "The destination folder for the output file.", transform: URL.init(fileURLWithPath:))
+    var destination: URL
+
     mutating func run() throws {
         guard directoryExists(at: location.path) else {
             throw ValidationError("Folder does not exist at \(location.path)")
         }
 
-//        let htmls = findAllFiles(in: [location.path])
-//
-//        let ast = OutNode.from(htmls)
+        let htmls = findAllFiles(in: [location.path])
 
-        print("Looking for file at: \(location.path)/test.html")
+        let ast = OutNode.from(htmls, with: SwiftCodeGenerator.SwiftPageSignatures.shared(for: htmls, with: [.init(type: "Request", name: "req", label: nil)]))
 
-        if let contents = try? String(contentsOfFile: "\(location.path)/test.html") {
-            if let storage = Parser.parse(html: contents) {
-                print("Node count: \(storage.values.count)")
-                let generator = SwiftCodeGenerator()
-                generator.load(from: storage)
-                let result = generator.generateText(at: 1)
+        let output = ast.build()
 
-                print("Text:\n\(result)")
-            } else {
-                print("Could not parse the file.")
-            }
-        } else {
-            print("File not found.")
-        }
+        let destination = destination.appendingPathComponent("Pages.swift")
+
+        try output.write(to: destination, atomically: true, encoding: .utf8)
     }
 
     func directoryExists(at path: String) -> Bool {
