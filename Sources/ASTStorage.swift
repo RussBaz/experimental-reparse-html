@@ -8,6 +8,8 @@ public final class ASTStorage {
             switch last {
             case .constant:
                 self
+            case .requirement:
+                self
             case let .slotDeclaration(_, defaults):
                 defaults.getCurrentBranch() ?? self
             case let .slotCommand(_, contents):

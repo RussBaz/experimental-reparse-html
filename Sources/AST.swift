@@ -8,6 +8,7 @@ public indirect enum AST {
     case conditional(name: String?, check: String, type: ConditionType, contents: ASTStorage)
     case loop(forEvery: String, name: String?, contents: ASTStorage)
     case modifiers(applying: [AttributeModifier], tag: TagType)
+    case requirement(name: String, type: String, label: String?, value: String?)
     case eval(line: String)
     case value(of: String)
     case assignment(name: String, line: String)

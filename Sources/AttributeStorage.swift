@@ -91,7 +91,7 @@ public final class AttributeStorage {
         return storage
     }
 
-    func codeString(at indentation: Int) -> String {
+    func codeString(at _: Int) -> String {
         var lines: [String] = []
         for (key, value) in attributes {
             switch value {
@@ -101,7 +101,7 @@ public final class AttributeStorage {
                 lines.append("\"\(key)\": .string(\"\(v)\")")
             }
         }
-        return "\(String(repeating: "    ", count: indentation))attributes = AttributeStorage.from(attributes: [\(lines.joined(separator: ", "))])"
+        return lines.joined(separator: ", ")
     }
 }
 

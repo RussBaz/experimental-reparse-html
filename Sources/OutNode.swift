@@ -37,18 +37,18 @@ extension OutNode {
         }
     }
 
-    func build(name: String = "Pages", offset: Int = 0) -> String {
+    func build(name: String, extensionName ext: String, with signatures: SwiftCodeGenerator.SwiftPageSignatures, offset: Int = 0) -> String {
         let header = """
         \(String(repeating: " ", count: offset * 4))enum \(name.capitalized) {
         """
 
         let children = children.map { c in
-            c.value.build(name: c.key, offset: offset + 1)
+            c.value.build(name: c.key, extensionName: ext, with: signatures, offset: offset + 1)
         }
         .joined(separator: "\n\n")
 
         let renderers = pages.map { p in
-            buildPageEnum(for: p, at: offset + 1)
+            buildPageEnum(for: p, signatures: signatures, extensionName: ext, at: offset + 1)
         }
         .joined(separator: "\n\n")
 
@@ -80,15 +80,17 @@ extension OutNode {
         """
     }
 
-    func buildIncludeFunc(for page: RendererDef, offset: Int = 0) -> String {
+    func buildIncludeFunc(for page: RendererDef, signatures: SwiftCodeGenerator.SwiftPageSignatures, extensionName ext: String, offset: Int = 0) -> String {
         guard let contents = try? String(contentsOfFile: page.path) else { return "" }
         guard let storage = Parser.parse(html: contents) else { return "" }
 
-        let generator = SwiftCodeGenerator(page.name, for: storage)
+        let properties = SwiftCodeGenerator.PageProperties(name: page.name, fileExtension: ext)
+
+        let generator = SwiftCodeGenerator(ast: storage, signatures: signatures, page: properties)
 
         generator.run(at: offset + 1)
 
-        return generator.text
+        return properties.asText()
     }
 
     func buildPathFunc(for path: String, offset: Int = 0) -> String {
@@ -101,12 +103,12 @@ extension OutNode {
         """
     }
 
-    func buildPageEnum(for page: RendererDef, at offset: Int = 0) -> String {
+    func buildPageEnum(for page: RendererDef, signatures: SwiftCodeGenerator.SwiftPageSignatures, extensionName ext: String, at offset: Int = 0) -> String {
         """
         \(String(repeating: " ", count: offset * 4))enum \(page.name.capitalized) {
         \(buildPathFunc(for: page.path, offset: offset + 1))
         \(buildRenderFunc(for: page.path, offset: offset + 1))
-        \(buildIncludeFunc(for: page, offset: offset))
+        \(buildIncludeFunc(for: page, signatures: signatures, extensionName: ext, offset: offset))
         \(String(repeating: " ", count: offset * 4))}
         """
     }

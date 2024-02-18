@@ -1,4 +1,18 @@
+
+<r-require name="myStuff" type="String" default='"Hello?"' />
+<r-require name="myVar" type="String" />
+
+<r-require name="a" type="Int" default=0 />
+<r-require name="b" type="[Int]" default="[]" />
+<r-require name="c" type="[String]" />
+<r-require name="data" type="[Int]" default="[12, 4]" />
+<r-require name="room" type="[Int]" />
+
+<r-require name="offset" type="Int" default="1" />
+
 <r-include name="Inner.Extra.extra"/>
+
+<r-require name="d" type="Int" default=0 />
 <r-var name="v" line="false" />
 <div  disabled v=true b=01 class="oops привет 'a' | {b}" data-index-number="12314" >
     wut?
@@ -8,7 +22,7 @@
     <h4>oops</h4>
 </r-block>
 <r-include/>
-<r-include name="another">
+<r-include name="inner.example">
     <div>
         <p class="normal">
             Amazing!
@@ -20,7 +34,7 @@
 <br>
 <r-block />
 <div>
-    <h1 r-for-every="b" r-if="a <1" r-tag="test">hello</h1>
+    <h1 r-for-every="b" r-if="a < 1" r-tag="test">hello</h1>
     <span>1</span>
     <r-block r-for-every="c">hello</r-block>
     <div>
@@ -29,7 +43,7 @@
           <p>Hello <r-index />: <r-item /></p>
           <p>
             <r-eval>
-              index < item.pos + :offset - data.oops.map { $0 / 2 } #(hello)
+              index < item + offset - data.map( { $0 / 2 } ).reduce(0, { $0*10 + $1 })
             </r-eval>
           </p>
         </r-block>

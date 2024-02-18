@@ -26,18 +26,42 @@ struct ReparseHtml: ParsableCommand {
     @Argument(help: "The destination folder for the output file.", transform: URL.init(fileURLWithPath:))
     var destination: URL
 
+    @Option(help: "Output file name")
+    var fileName = "Pages.swift"
+
+    @Option(help: "The file extension to be searched for")
+    var fileExtension = "html"
+
+    @Option(help: "The name of the generated enum")
+    var enumName = "Pages"
+
+    @Option(help: "List of global imports")
+    var imports: [String] = []
+
     mutating func run() throws {
         guard directoryExists(at: location.path) else {
             throw ValidationError("Folder does not exist at \(location.path)")
         }
 
-        let htmls = findAllFiles(in: [location.path])
+        var buffer = [String]()
+        for i in imports {
+            buffer.append("import \(i)")
+        }
 
-        let ast = OutNode.from(htmls, with: SwiftCodeGenerator.SwiftPageSignatures.shared(for: htmls, with: [.init(type: "Request", name: "req", label: nil)]))
+        if !imports.isEmpty {
+            buffer.append("")
+            buffer.append("")
+        }
 
-        let output = ast.build()
+        let htmls = findAllFiles(in: [location.path], searching: fileExtension)
 
-        let destination = destination.appendingPathComponent("Pages.swift")
+        let signatures = SwiftCodeGenerator.SwiftPageSignatures.shared(for: htmls, with: [.init(type: "String", name: "req", label: nil)])
+
+        let ast = OutNode.from(htmls, with: signatures)
+
+        let output = buffer.joined(separator: "\n") + ast.build(name: enumName, extensionName: fileExtension, with: signatures)
+
+        let destination = destination.appendingPathComponent(fileName)
 
         try output.write(to: destination, atomically: true, encoding: .utf8)
     }
@@ -48,18 +72,18 @@ struct ReparseHtml: ParsableCommand {
         return exists && isDirectory.boolValue
     }
 
-    func findAllFiles(in directories: [String]) -> [PageDef] {
+    func findAllFiles(in directories: [String], searching ext: String) -> [PageDef] {
         var result: [PageDef] = []
 
         for path in directories {
-            let foundFiles = findFilesInDirectory(at: path)
+            let foundFiles = findFilesInDirectory(at: path, searching: ext)
             result.append(contentsOf: foundFiles)
         }
 
         return result
     }
 
-    func findFilesInDirectory(at path: String) -> [PageDef] {
+    func findFilesInDirectory(at path: String, searching ext: String) -> [PageDef] {
         guard directoryExists(at: path) else { return [] }
 
         guard let enumerator = FileManager.default.enumerator(atPath: path) else {
@@ -72,18 +96,18 @@ struct ReparseHtml: ParsableCommand {
         for i in paths {
             let url = URL(fileURLWithPath: "\(path)/\(i)")
             let path = url.path
-            if path.hasSuffix(".html") {
-                htmls.append(.init(path: path, name: ReparseHtml.splitFilenameIntoComponents(i).reversed()))
+            if path.hasSuffix(".\(ext)") {
+                htmls.append(.init(path: path, name: ReparseHtml.splitFilenameIntoComponents(i, dropping: ext).reversed()))
             }
         }
 
         return htmls
     }
 
-    static func splitFilenameIntoComponents(_ name: String) -> [String] {
+    static func splitFilenameIntoComponents(_ name: String, dropping ext: String) -> [String] {
         var r = name.split(separator: "/")
 
-        if r.last?.hasSuffix(".html") == true {
+        if r.last?.hasSuffix(".\(ext)") == true {
             r[r.count - 1] = r[r.count - 1].dropLast(5)
         }
 

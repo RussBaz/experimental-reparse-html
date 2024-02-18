@@ -108,7 +108,7 @@ extension Parser {
                 attributes = AttributeStorage()
             }
 
-            guard name != "r-set", name != "r-unset" else { return nil }
+            guard name != "r-set", name != "r-unset", name != "r-require" else { return nil }
 
             if let v = attributes.remove("r-if") {
                 ifLine = v.text
@@ -169,6 +169,8 @@ extension Parser {
         switch tag.name {
         case "r-include":
             openIncludeTag(tag, at: depth)
+        case "r-require":
+            openRequireTag(tag, at: depth)
         case "r-set":
             openSetTag(tag, at: depth)
         case "r-unset":
@@ -251,6 +253,8 @@ extension Parser {
         switch tag.name {
         case "r-include":
             branch.closeBranch()
+        case "r-require":
+            ()
         case "r-set":
             ()
         case "r-unset":
@@ -320,6 +324,31 @@ extension Parser {
         }
 
         branch.append(node: .include(name: name, contents: storage))
+    }
+
+    func openRequireTag(_ tag: AST.TagType, at depth: Int) {
+        guard ast.values.allSatisfy({ v in
+            if case .requirement = v {
+                return true
+            }
+            if v.isEmptyConstant {
+                return true
+            }
+
+            return false
+        }) else { return }
+        guard !tag.isClosing else { return }
+        guard let attributes = tag.attributes else { return }
+
+        if !tag.isVoid { ignoringUntilDepth = depth }
+
+        guard let name = attributes.find("name") else { return }
+        guard let type = attributes.find("type") else { return }
+
+        let label = attributes.find("label")
+        let defaultValue = attributes.find("default")
+
+        ast.append(node: .requirement(name: name, type: type, label: label, value: defaultValue))
     }
 
     func openSetTag(_ tag: AST.TagType, at depth: Int) {
