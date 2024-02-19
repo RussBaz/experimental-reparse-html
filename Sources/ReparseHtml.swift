@@ -13,11 +13,6 @@ struct PageDef {
     let name: [String]
 }
 
-struct RendererDef {
-    let path: String
-    let name: String
-}
-
 @main
 struct ReparseHtml: ParsableCommand {
     @Argument(help: "The target data folder location.", transform: URL.init(fileURLWithPath:))
@@ -38,32 +33,31 @@ struct ReparseHtml: ParsableCommand {
     @Option(help: "List of global imports")
     var imports: [String] = []
 
+    @Flag(help: "Write the output to the console instead of file")
+    var dryRun = false
+
     mutating func run() throws {
         guard directoryExists(at: location.path) else {
             throw ValidationError("Folder does not exist at \(location.path)")
-        }
-
-        var buffer = [String]()
-        for i in imports {
-            buffer.append("import \(i)")
-        }
-
-        if !imports.isEmpty {
-            buffer.append("")
-            buffer.append("")
         }
 
         let htmls = findAllFiles(in: [location.path], searching: fileExtension)
 
         let signatures = SwiftCodeGenerator.SwiftPageSignatures.shared(for: htmls, with: [.init(type: "String", name: "req", label: nil)])
 
-        let ast = OutNode.from(htmls, with: signatures)
+        let builder = SwiftOutputBuilder(name: enumName, enumName: enumName, fileExtension: fileExtension, signatures: signatures, at: 0)
 
-        let output = buffer.joined(separator: "\n") + ast.build(name: enumName, extensionName: fileExtension, with: signatures)
+        builder.add(pages: htmls)
+
+        let output = builder.text(imports: imports)
 
         let destination = destination.appendingPathComponent(fileName)
 
-        try output.write(to: destination, atomically: true, encoding: .utf8)
+        if dryRun {
+            print(output)
+        } else {
+            try output.write(to: destination, atomically: true, encoding: .utf8)
+        }
     }
 
     func directoryExists(at path: String) -> Bool {

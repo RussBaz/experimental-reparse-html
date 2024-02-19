@@ -5,16 +5,6 @@ public final class SwiftCodeGenerator {
         let label: String?
     }
 
-    enum LineType {
-        case text(String)
-        case deferred(() -> [String])
-    }
-
-    struct LineDef {
-        let indentation: Int
-        let line: LineType
-    }
-
     struct PageSignature {
         let parameters: [ParameterDef]
         let includes: [String]
@@ -22,26 +12,7 @@ public final class SwiftCodeGenerator {
 
     final class SwiftPageSignatures {
         var signatures = [String: PageSignature]()
-    }
-
-    final class PageProperties {
-        let name: String
-        let fileExtension: String
-        var lines: [LineDef] = []
-        var conditionTags: [String] = []
-        var defaultValues: [String: String] = [:]
-        var modifiersPresent = false
-
-        init(name: String, fileExtension: String) {
-            self.name = name
-            self.fileExtension = fileExtension
-        }
-
-        func clear() {
-            lines = []
-            conditionTags = []
-            defaultValues = [:]
-        }
+        private var ressolved: [String: [ParameterDef]] = [:]
     }
 
     let data: ASTStorage
@@ -76,7 +47,7 @@ public final class SwiftCodeGenerator {
         properties.append(at: indentation + 1) {
             var result = [String]()
             for (assignment, value) in self.properties.defaultValues {
-                result.append("var \(assignment) = \(assignment) ?? \(value)")
+                result.append("let \(assignment) = \(assignment) ?? \(value)")
             }
 
             return result
@@ -171,12 +142,12 @@ public final class SwiftCodeGenerator {
             case let .include(name, contents):
                 let name = ReparseHtml.splitFilenameIntoComponents(name, dropping: properties.fileExtension)
                 if !name.isEmpty {
-                    let name = "Pages.\(name.joined(separator: "."))"
+                    let name = name.joined(separator: ".")
                     signatures.append(include: name, to: properties.name)
                     if contents.isEmpty {
                         properties.append(at: indentation) {
                             let signature = self.signatures.parameters(of: name).map(\.asParameter).joined(separator: ", ")
-                            return ["lines.include(\(name).include(\(signature)))"]
+                            return ["lines.include(\(self.properties.enumName).\(name).include(\(signature)))"]
                         }
                     } else {
                         let innerGenerator = SwiftCodeGenerator(ast: contents, signatures: signatures, page: properties)
@@ -342,9 +313,13 @@ extension SwiftCodeGenerator.ParameterDef {
     }
 }
 
+extension SwiftCodeGenerator.ParameterDef: Equatable {}
+
 extension SwiftCodeGenerator.SwiftPageSignatures {
     func parameters(of name: String) -> [SwiftCodeGenerator.ParameterDef] {
-        if let parameters = signatures[name] {
+        if let parameters = ressolved[name] {
+            parameters
+        } else if let parameters = signatures[name] {
             parameters.parameters
         } else {
             []
@@ -384,67 +359,69 @@ extension SwiftCodeGenerator.SwiftPageSignatures {
     }
 }
 
-extension SwiftCodeGenerator.PageProperties {
-    func append(at indentation: Int) {
-        lines.append(.init(indentation: indentation, line: .text("")))
-    }
-
-    func prepend(at indentation: Int) {
-        lines.insert(.init(indentation: indentation, line: .text("")), at: 0)
-    }
-
-    func append(_ text: String, at indentation: Int) {
-        lines.append(.init(indentation: indentation, line: .text(text)))
-    }
-
-    func append(at indentation: Int, deferred: @escaping () -> [String]) {
-        lines.append(.init(indentation: indentation, line: .deferred(deferred)))
-    }
-
-    func prepend(_ text: String, at indentation: Int) {
-        lines.insert(.init(indentation: indentation, line: .text(text)), at: 0)
-    }
-
-    func prepend(at indentation: Int, deferred: @escaping () -> [String]) {
-        lines.insert(.init(indentation: indentation, line: .deferred(deferred)), at: 0)
-    }
-
-    func append(contentsOf data: [SwiftCodeGenerator.LineDef]) {
-        lines.append(contentsOf: data)
-    }
-
-    func prepend(contentsOf data: [SwiftCodeGenerator.LineDef]) {
-        lines.insert(contentsOf: data, at: 0)
-    }
-
-    func append(condition tag: String) {
-        if !conditionTags.contains(tag) {
-            conditionTags.append(tag)
+extension SwiftCodeGenerator.SwiftPageSignatures {
+    class SignatureResolver {
+        enum ResolverError: Error {
+            case circularDependency
+            case missingSignature
+            case missingResolution
+            case redefenitionOfParameters
         }
-    }
 
-    func appendDefault(name: String, value: String) {
-        defaultValues[name] = value
-    }
+        let input: SwiftCodeGenerator.SwiftPageSignatures
+        var resolved: [String: [SwiftCodeGenerator.ParameterDef]] = [:]
+        var currentSearch: [String] = []
 
-    func asText(at indenation: Int = 0) -> String {
-        asLines(at: indenation).joined(separator: "\n")
-    }
+        init(input: SwiftCodeGenerator.SwiftPageSignatures) {
+            self.input = input
+        }
 
-    func asLines(at indentation: Int = 0) -> [String] {
-        var result = [String]()
+        func parse() {
+            for (key, value) in input.signatures {
+                currentSearch = []
+                parseSignature(value, with: key)
+            }
 
-        for l in lines {
-            switch l.line {
-            case let .text(string):
-                result.append("\(String(repeating: "    ", count: indentation + l.indentation))\(string)")
-            case let .deferred(f):
-                for i in f() {
-                    result.append("\(String(repeating: "    ", count: indentation + l.indentation))\(i)")
+            input.ressolved = resolved
+        }
+
+        func parseSignature(_ signature: SwiftCodeGenerator.PageSignature, with name: String) {
+            // I originaly planned to throw an appropriate exception on a parse failure
+            // but I realised that I could not think of a good way of recovering from those exceptions
+            // So I decided to go with skip on error for now and deal with this later if the need ever arises
+            guard !currentSearch.contains(name) else { return }
+            currentSearch.append(name)
+
+            if let _ = resolved[name] {
+                ()
+            } else {
+                var buffer = signature.parameters
+
+                for i in signature.includes {
+                    guard let s = input.signatures[i] else { continue }
+                    parseSignature(s, with: i)
+                    guard let cached = resolved[i] else { continue }
+                    for c in cached {
+                        let r = buffer.filter { $0.name == c.name }
+
+                        if r.isEmpty {
+                            buffer.append(c)
+                        } else if r.count == 1, let item = r.first {
+                            guard c == item else { continue }
+                        } else {
+                            buffer.removeAll(where: { $0.name == c.name })
+                            buffer.append(c)
+                        }
+                    }
                 }
+
+                resolved[name] = buffer
             }
         }
+    }
 
-        return result
+    func resolve() {
+        let resolver = SignatureResolver(input: self)
+        resolver.parse()
     }
 }
