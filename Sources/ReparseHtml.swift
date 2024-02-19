@@ -33,6 +33,9 @@ struct ReparseHtml: ParsableCommand {
     @Option(help: "List of global imports")
     var imports: [String] = []
 
+    @Option(help: "List of shared parameters (parameters to be added to every 'include' function) in a form of 'label:name:type' or 'name:type'")
+    var parameters: [String] = []
+
     @Flag(help: "Write the output to the console instead of file")
     var dryRun = false
 
@@ -43,7 +46,7 @@ struct ReparseHtml: ParsableCommand {
 
         let htmls = findAllFiles(in: [location.path], searching: fileExtension)
 
-        let signatures = SwiftCodeGenerator.SwiftPageSignatures.shared(for: htmls, with: [.init(type: "String", name: "req", label: nil)])
+        let signatures = SwiftCodeGenerator.SwiftPageSignatures.shared(for: htmls, with: parameters)
 
         let builder = SwiftOutputBuilder(name: enumName, enumName: enumName, fileExtension: fileExtension, signatures: signatures, at: 0)
 

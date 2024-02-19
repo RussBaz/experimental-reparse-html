@@ -314,6 +314,41 @@ extension SwiftCodeGenerator.ParameterDef {
 }
 
 extension SwiftCodeGenerator.ParameterDef: Equatable {}
+extension SwiftCodeGenerator.ParameterDef: LosslessStringConvertible {
+    init?(_ description: String) {
+        let input = description.split(separator: ":")
+        if input.count == 2 {
+            let inputName = String(input[0].trimmingCharacters(in: .whitespacesAndNewlines))
+            let inputType = String(input[1].trimmingCharacters(in: .whitespacesAndNewlines))
+
+            guard !inputName.isEmpty, !inputType.isEmpty else { return nil }
+
+            label = nil
+            name = inputName
+            type = inputType
+        } else if input.count == 3 {
+            let inputLabel = String(input[0].trimmingCharacters(in: .whitespacesAndNewlines))
+            let inputName = String(input[1].trimmingCharacters(in: .whitespacesAndNewlines))
+            let inputType = String(input[2].trimmingCharacters(in: .whitespacesAndNewlines))
+
+            guard !inputName.isEmpty, !inputType.isEmpty else { return nil }
+
+            label = if inputLabel.isEmpty { nil } else { inputLabel }
+            name = inputName
+            type = inputType
+        } else {
+            return nil
+        }
+    }
+
+    var description: String {
+        if let label {
+            "\(label):\(name):\(type)"
+        } else {
+            ":\(name):\(type)"
+        }
+    }
+}
 
 extension SwiftCodeGenerator.SwiftPageSignatures {
     func parameters(of name: String) -> [SwiftCodeGenerator.ParameterDef] {
@@ -356,6 +391,12 @@ extension SwiftCodeGenerator.SwiftPageSignatures {
         }
 
         return signatures
+    }
+
+    static func shared(for pages: [PageDef], with parameters: [String]) -> SwiftCodeGenerator.SwiftPageSignatures {
+        let parameters = parameters.compactMap(SwiftCodeGenerator.ParameterDef.init)
+
+        return SwiftCodeGenerator.SwiftPageSignatures.shared(for: pages, with: parameters)
     }
 }
 
