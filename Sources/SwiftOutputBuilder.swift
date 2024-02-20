@@ -87,9 +87,13 @@ final class SwiftOutputBuilder {
         }
     }
 
-    func buildRenderFunc(for _: String, at indentation: Int = 0) -> String {
-        """
-        \(String(repeating: "    ", count: indentation))// Hello Renderer!
+    func buildRenderFunc(for page: RendererDef, at indentation: Int = 0) -> String {
+        let signature = signatures.parameters(of: page.properties.name).map(\.asDeclaration).joined(separator: ", ")
+        let include = signatures.parameters(of: page.properties.name).map(\.asParameter).joined(separator: ", ")
+        return """
+        \(String(repeating: "    ", count: indentation))static func render(\(signature)) -> String {
+        \(String(repeating: "    ", count: indentation))    Self.include(\(include)).render()
+        \(String(repeating: "    ", count: indentation))}
         """
     }
 
@@ -111,7 +115,7 @@ final class SwiftOutputBuilder {
         """
         \(String(repeating: "    ", count: indentation))enum \(page.name.capitalized) {
         \(buildPathFunc(for: page.path, at: indentation + 1))
-        \(buildRenderFunc(for: page.path, at: indentation + 1))
+        \(buildRenderFunc(for: page, at: indentation + 1))
         \(buildIncludeFunc(for: page))
         \(String(repeating: "    ", count: indentation))}
         """

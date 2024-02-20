@@ -7,4 +7,8 @@ final class LineStorage {
     func add(slot _: String, using _: (LineStorage) -> Void = { _ in }) {}
     func replace(slot _: String, using _: (LineStorage) -> Void = { _ in }) {}
     func declare(slot _: String, using _: (LineStorage) -> Void = { _ in }) {}
+
+    func render() -> String {
+        lines.joined(separator: "\n")
+    }
 }
