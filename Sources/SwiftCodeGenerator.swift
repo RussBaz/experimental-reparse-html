@@ -111,7 +111,7 @@ public final class SwiftCodeGenerator {
 
             case let .slotDeclaration(name: name, defaults: contents):
                 if contents.isEmpty {
-                    properties.append("lines.declare(slot: \"\(name))\")", at: indentation)
+                    properties.append("lines.declare(slot: \"\(name)\")", at: indentation)
                 } else {
                     let innerGenerator = SwiftCodeGenerator(ast: contents, signatures: signatures, page: properties)
                     properties.append("lines.declare(slot: \"\(name)\") { lines in", at: indentation)
@@ -154,10 +154,47 @@ public final class SwiftCodeGenerator {
 
                         properties.append(at: indentation) {
                             let signature = self.signatures.parameters(of: name).map(\.asParameter).joined(separator: ", ")
-                            return ["lines.include(\(name).include(\(signature))) { lines in"]
+                            return ["lines.include(\(self.properties.enumName).\(name).include(\(signature))) { lines in"]
                         }
                         innerGenerator.generateBody(at: indentation + 1)
                         properties.append("}", at: indentation)
+                    }
+                }
+            case let .extend(name: name, condition: condition):
+                guard !name.isEmpty else { return }
+                let name = ReparseHtml.splitFilenameIntoComponents(name, dropping: properties.fileExtension)
+
+                if let condition {
+                    let name = name.joined(separator: ".")
+                    signatures.append(include: name, to: properties.name)
+
+                    let cn = condition.name ?? "previousUnnamedIfTaken"
+                    properties.append(condition: cn)
+
+                    switch condition.type {
+                    case .ifType:
+                        properties.append("if \(condition.check) {", at: indentation)
+                    case .elseIfType:
+                        properties.append("if !\(cn), \(condition.check) {", at: indentation)
+                    case .elseType:
+                        properties.append("if !\(cn) {", at: indentation)
+                    }
+
+                    properties.append(at: indentation + 1) {
+                        let signature = self.signatures.parameters(of: name).map(\.asParameter).joined(separator: ", ")
+                        return ["lines.extend(\(self.properties.enumName).\(name).include(\(signature)))"]
+                    }
+
+                    properties.append("\(cn) = true", at: indentation + 1)
+                    properties.append("}", at: indentation)
+                } else {
+                    let name = name.joined(separator: ".")
+                    signatures.append(include: name, to: properties.name)
+
+                    properties.append(at: indentation) {
+                        let signature = self.signatures.parameters(of: name).map(\.asParameter).joined(separator: ", ")
+
+                        return ["lines.extend(\(self.properties.enumName).\(name).include(\(signature)))"]
                     }
                 }
             case let .conditional(name, check, type, contents):
@@ -279,10 +316,20 @@ public final class SwiftCodeGenerator {
                 }
             case let .eval(line):
                 properties.append("lines.append(\"\\(\(line.trimmingCharacters(in: .whitespacesAndNewlines)))\")", at: indentation)
-            case let .value(of):
-                properties.append("lines.append(\"\\(\(of))\")", at: indentation)
+            case let .value(of: name, defaultValue):
+                let defaultValue = defaultValue ?? ""
+
+                properties.append(at: indentation) {
+                    if let _ = self.properties.defaultValues[name] {
+                        ["lines.append(\"\\(\(name))\")"]
+                    } else if self.properties.conditionTags.contains(name) {
+                        ["lines.append(\"\\(\(name))\")"]
+                    } else {
+                        ["lines.append(\"\\(\(name) ?? \"\(defaultValue)\")\")"]
+                    }
+                }
             case let .assignment(name, line):
-                properties.append("var \(name) = \(line)", at: indentation)
+                properties.append("let \(name) = \(line)", at: indentation)
             case .index:
                 properties.append("lines.append(\"\\(index)\")", at: indentation)
             case .item:

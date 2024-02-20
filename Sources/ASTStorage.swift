@@ -16,6 +16,8 @@ public final class ASTStorage {
                 contents.getCurrentBranch() ?? self
             case let .include(_, contents):
                 contents.getCurrentBranch() ?? self
+            case .extend:
+                self
             case let .conditional(_, _, _, contents):
                 contents.getCurrentBranch() ?? self
             case let .loop(_, _, contents):

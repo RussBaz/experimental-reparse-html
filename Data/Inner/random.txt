@@ -1,6 +1,10 @@
 <r-include name="" r-if="" r-tag="" />
 <r-require name="" type="" default="" />
 
+<r-extend name="" />
+<r-extend name="" />
+<r-extend name="" />
+
 <r-include name="" r-if="" r-tag="">
   <p r-add-to-slot="">Random Data</p>
   <p r-replace-slot="">Random Data</p>

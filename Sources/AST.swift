@@ -5,12 +5,13 @@ public indirect enum AST {
     case slotDeclaration(name: String, defaults: ASTStorage)
     case slotCommand(type: SlotCommandType, contents: ASTStorage)
     case include(name: String, contents: ASTStorage)
+    case extend(name: String, condition: EmbeddedCondition?)
     case conditional(name: String?, check: String, type: ConditionType, contents: ASTStorage)
     case loop(forEvery: String, name: String?, contents: ASTStorage)
     case modifiers(applying: [AttributeModifier], tag: TagType)
     case requirement(name: String, type: String, label: String?, value: String?)
     case eval(line: String)
-    case value(of: String)
+    case value(of: String, defaultValue: String?)
     case assignment(name: String, line: String)
     case index
     case item
@@ -41,12 +42,12 @@ public indirect enum AST {
     }
 
     public enum AttributeModifier {
-        case append(name: String, value: AttributeStorage.AttributeValue, condition: AttributeCondition?)
-        case replace(name: String, value: AttributeStorage.AttributeValue, condition: AttributeCondition?)
-        case remove(name: String, condition: AttributeCondition?)
+        case append(name: String, value: AttributeStorage.AttributeValue, condition: EmbeddedCondition?)
+        case replace(name: String, value: AttributeStorage.AttributeValue, condition: EmbeddedCondition?)
+        case remove(name: String, condition: EmbeddedCondition?)
     }
 
-    public struct AttributeCondition {
+    public struct EmbeddedCondition {
         let type: ConditionType
         let check: String
         let name: String?
@@ -243,6 +244,6 @@ extension AST.Contents: Equatable {
 }
 
 extension AST.ConditionType: Equatable {}
-extension AST.AttributeCondition: Equatable {}
+extension AST.EmbeddedCondition: Equatable {}
 extension AST.AttributeModifier: Equatable {}
 extension AST.SlotCommandType: Equatable {}

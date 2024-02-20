@@ -108,7 +108,7 @@ extension Parser {
                 attributes = AttributeStorage()
             }
 
-            guard name != "r-set", name != "r-unset", name != "r-require" else { return nil }
+            guard name != "r-set", name != "r-unset", name != "r-require", name != "r-extend" else { return nil }
 
             if let v = attributes.remove("r-if") {
                 ifLine = v.text
@@ -169,6 +169,8 @@ extension Parser {
         switch tag.name {
         case "r-include":
             openIncludeTag(tag, at: depth)
+        case "r-extend":
+            openExtendTag(tag, at: depth)
         case "r-require":
             openRequireTag(tag, at: depth)
         case "r-set":
@@ -253,6 +255,8 @@ extension Parser {
         switch tag.name {
         case "r-include":
             branch.closeBranch()
+        case "r-extend":
+            ()
         case "r-require":
             ()
         case "r-set":
@@ -326,6 +330,41 @@ extension Parser {
         branch.append(node: .include(name: name, contents: storage))
     }
 
+    func openExtendTag(_ tag: AST.TagType, at depth: Int) {
+        guard ast.values.allSatisfy({ v in
+            if case .extend = v {
+                return true
+            }
+            if case .requirement = v {
+                return true
+            }
+            if v.isEmptyConstant {
+                return true
+            }
+            return false
+        }) else { return }
+        guard !tag.isClosing else { return }
+        guard let attributes = tag.attributes else { return }
+
+        if !tag.isVoid { ignoringUntilDepth = depth }
+
+        guard let name = attributes.find("name") else { return }
+
+        let conditionName = attributes.find("r-tag")
+
+        let condition: AST.EmbeddedCondition? = if let check = attributes.find("r-if") {
+            .init(type: .ifType, check: check, name: conditionName)
+        } else if let check = attributes.find("r-else-if") {
+            .init(type: .ifType, check: check, name: conditionName)
+        } else if attributes.has("r-else") {
+            .init(type: .ifType, check: "", name: conditionName)
+        } else {
+            nil
+        }
+
+        ast.append(node: .extend(name: name, condition: condition))
+    }
+
     func openRequireTag(_ tag: AST.TagType, at depth: Int) {
         guard ast.values.allSatisfy({ v in
             if case .requirement = v {
@@ -362,7 +401,7 @@ extension Parser {
 
         let conditionName = attributes.find("r-tag")
 
-        let condition: AST.AttributeCondition? = if let check = attributes.find("r-if") {
+        let condition: AST.EmbeddedCondition? = if let check = attributes.find("r-if") {
             .init(type: .ifType, check: check, name: conditionName)
         } else if let check = attributes.find("r-else-if") {
             .init(type: .ifType, check: check, name: conditionName)
@@ -430,7 +469,7 @@ extension Parser {
 
         let conditionName = attributes.find("r-tag")
 
-        let condition: AST.AttributeCondition? = if let check = attributes.find("r-if") {
+        let condition: AST.EmbeddedCondition? = if let check = attributes.find("r-if") {
             .init(type: .ifType, check: check, name: conditionName)
         } else if let check = attributes.find("r-else-if") {
             .init(type: .ifType, check: check, name: conditionName)
@@ -504,7 +543,9 @@ extension Parser {
         guard let attributes = tag.attributes else { return }
         guard let name = attributes.find("of") else { return }
 
-        branch.append(node: .value(of: name))
+        let defaultValue = attributes.find("default")
+
+        branch.append(node: .value(of: name, defaultValue: defaultValue))
     }
 
     func openEvalTag(_ tag: AST.TagType, at depth: Int) {
@@ -527,7 +568,8 @@ extension Parser {
         guard let branch = ast.getCurrentBranch() else { return }
         guard !tag.isClosing else { return }
         guard let attributes = tag.attributes else { return }
-        guard let name = attributes.find("name") else { return }
+
+        let name = attributes.find("name") ?? "default"
 
         let storage = ASTStorage()
         if tag.isVoid {
