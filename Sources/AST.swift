@@ -1,5 +1,3 @@
-import SwiftSoup
-
 public indirect enum AST {
     case constant(contents: Contents)
     case slotDeclaration(name: String, defaults: ASTStorage)
@@ -16,6 +14,7 @@ public indirect enum AST {
     case index
     case item
     case endOfBranch
+    case noop
 
     public enum TagType {
         case openingTag(name: String, attributes: AttributeStorage)

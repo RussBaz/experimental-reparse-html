@@ -6,7 +6,6 @@
 
 import ArgumentParser
 import Foundation
-import SwiftSoup
 
 struct PageDef {
     let path: String
@@ -46,7 +45,7 @@ struct ReparseHtml: ParsableCommand {
 
         let htmls = findAllFiles(in: [location.path], searching: fileExtension)
 
-        let signatures = SwiftCodeGenerator.SwiftPageSignatures.shared(for: htmls, with: parameters)
+        let signatures = SwiftPageSignatures.shared(for: htmls, with: parameters)
 
         let builder = SwiftOutputBuilder(name: enumName, enumName: enumName, fileExtension: fileExtension, signatures: signatures, at: 0)
 

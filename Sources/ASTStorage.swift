@@ -36,6 +36,8 @@ public final class ASTStorage {
                 self
             case .endOfBranch:
                 nil
+            case .noop:
+                self
             }
         } else {
             // Can never be reached
@@ -67,6 +69,30 @@ public final class ASTStorage {
 
     func popLast() -> AST? {
         values.popLast()
+    }
+
+    func popOutOfOrderNodes() -> [AST] {
+        guard !values.isEmpty else { return [] }
+        var canExtend = true
+        var result: [AST] = []
+
+        for (pos, item) in values.enumerated() {
+            if case .extend = item {
+                if canExtend {
+                    result.append(item)
+                }
+                values[pos] = .noop
+            } else if item.isEmptyConstant {
+                values[pos] = .noop
+            } else if case .requirement = item {
+                result.append(item)
+                values[pos] = .noop
+            } else if canExtend {
+                canExtend = false
+            }
+        }
+
+        return []
     }
 
     var isEmpty: Bool {

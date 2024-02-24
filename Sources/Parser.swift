@@ -1,5 +1,4 @@
 import Foundation
-import SwiftSoup
 
 final class Parser {
     let ast = ASTStorage()

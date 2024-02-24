@@ -12,9 +12,9 @@ final class SwiftOutputBuilder {
     let name: String
     let enumName: String
     let fileExtension: String
-    let signatures: SwiftCodeGenerator.SwiftPageSignatures
+    let signatures: SwiftPageSignatures
 
-    init(name: String, enumName: String, fileExtension: String, signatures: SwiftCodeGenerator.SwiftPageSignatures, at indentation: Int) {
+    init(name: String, enumName: String, fileExtension: String, signatures: SwiftPageSignatures, at indentation: Int) {
         self.name = name
         self.enumName = enumName
         self.fileExtension = fileExtension
@@ -123,7 +123,7 @@ final class SwiftOutputBuilder {
 }
 
 extension SwiftOutputBuilder.RendererDef {
-    init?(page: PageDef, signatures: SwiftCodeGenerator.SwiftPageSignatures, fileExtension ext: String, enumName: String, at indentation: Int) {
+    init?(page: PageDef, signatures: SwiftPageSignatures, fileExtension ext: String, enumName: String, at indentation: Int) {
         guard let contents = try? String(contentsOfFile: page.path) else { return nil }
         guard let storage = Parser.parse(html: contents) else { return nil }
         guard let fragmentName = page.name.first else { return nil }

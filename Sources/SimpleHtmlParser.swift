@@ -101,7 +101,6 @@ final class SimpleHtmlParser {
                 state = .lookingForText(buffer: buffer + String(char))
             }
         case let .lookingForTagName(name):
-            // Closing Tag!
             if name.isEmpty, char == "/" {
                 state = .lookingForClosingTagName(name: "")
             } else if name.isEmpty, char == " " || char == "\n" {
@@ -110,9 +109,11 @@ final class SimpleHtmlParser {
                 state = .lookingForVoidTagEnd(tag: name, attributes: AttributeStorage())
             } else if !name.isEmpty, char == ">" {
                 appendTag(.openingTag(name: name, attributes: AttributeStorage()), till: index)
+            } else if !name.isEmpty, char == "-" || char == "." {
+                state = .lookingForTagName(name: name + String(char))
             } else if isAllowedInTags(char) {
                 state = .lookingForTagName(name: name + String(char))
-            } else if char == " " || char == "\n", !name.isEmpty {
+            } else if char == " " || char == "\n", !name.isEmpty, name.last != "-", name.last != "." {
                 state = .lookingForAttributes(tag: name, attributes: AttributeStorage())
             } else {
                 cancelTag(till: index)
@@ -222,10 +223,14 @@ final class SimpleHtmlParser {
                 cancelTag(till: index)
             }
         case let .lookingForClosingTagName(name):
-            if char == " " || char == "\n", !name.isEmpty {
+            if name.isEmpty, char == " " || char == "\n" {
+                state = .lookingForClosingTagName(name: name)
+            } else if !name.isEmpty, name.last != "-", name.last != ".", char == " " || char == "\n" {
                 state = .lookingForClosingTagEnd(name: name)
-            } else if char == ">", !name.isEmpty {
+            } else if !name.isEmpty, char == ">" {
                 appendTag(.closingTag(name: name), till: index)
+            } else if !name.isEmpty, char == "-" || char == "." {
+                state = .lookingForTagName(name: name + String(char))
             } else if isAllowedInTags(char) {
                 state = .lookingForClosingTagName(name: name + String(char))
             } else {
@@ -305,7 +310,7 @@ final class SimpleHtmlParser {
     }
 
     func isAllowedInTags(_ char: Character) -> Bool {
-        isAsciiNumber(char) || isAsciiLetter(char) || char == "-"
+        isAsciiNumber(char) || isAsciiLetter(char)
     }
 
     func lastTag() -> AST.TagType? {

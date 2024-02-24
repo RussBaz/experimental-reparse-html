@@ -1,5 +1,3 @@
-import SwiftSoup
-
 public final class AttributeStorage {
     public enum AttributeValue {
         case flag
