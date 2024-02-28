@@ -3,21 +3,13 @@ final class SwiftLineStorage {
 
     enum StorageType {
         case empty
-        case normal(contents: [LineCommand])
-        case extending(contents: [LineCommand], templates: [SwiftLineStorage])
-    }
-
-    enum LineCommand {
-        case text(value: String, slot: String?, replace: Bool)
-        case declare(name: String, generator: LineGenerator?)
-        case include(storage: SwiftLineStorage, generator: LineGenerator?)
-        case noop
+        case normal(contents: [SwiftLineCommand])
+        case extending(contents: [SwiftLineCommand], templates: [SwiftLineStorage])
     }
 
     var type: StorageType = .empty
 
     var selectedSlot: String?
-    var replacing = false
 
     func extend(_ storage: SwiftLineStorage) {
         switch type {
@@ -33,7 +25,7 @@ final class SwiftLineStorage {
         }
     }
 
-    func append(node: LineCommand) {
+    func append(node: SwiftLineCommand) {
         switch type {
         case .empty:
             type = .normal(contents: [node])
@@ -47,185 +39,249 @@ final class SwiftLineStorage {
     }
 
     func append(_ text: String) {
-        append(node: .text(value: text, slot: selectedSlot, replace: replacing))
+        append(node: .text(value: text))
     }
 
     func declare(slot name: String, using generator: LineGenerator? = nil) {
-        append(node: .declare(name: name, generator: generator))
+        if let generator {
+            append(node: .startDeclareWithDefaults(name: name))
+            generator(self)
+            append(node: .endDeclareWithDefaults)
+        } else {
+            append(node: .declare(name: name))
+        }
     }
 
     func include(_ storage: SwiftLineStorage, using generator: LineGenerator? = nil) {
-        append(node: .include(storage: storage, generator: generator))
+        if let generator {
+            append(node: .startIncludeWithDefaults(storage: storage))
+            generator(self)
+            append(node: .endIncludeWithDefaults)
+        } else {
+            append(node: .include(storage: storage))
+        }
     }
 
-    func add(slot name: String, using generator: LineGenerator? = nil) {
-        guard let generator else { return }
-
+    func add(slot name: String, using generator: LineGenerator) {
         let previousSelectedSlot = selectedSlot
-        let previouslyReplacing = replacing
-
         selectedSlot = name
-        replacing = false
 
+        append(node: .select(slot: name))
         generator(self)
+        append(node: .select(slot: previousSelectedSlot))
 
         selectedSlot = previousSelectedSlot
-        replacing = previouslyReplacing
     }
 
-    func replace(slot name: String, using generator: LineGenerator? = nil) {
-        guard let generator else { return }
-
+    func replace(slot name: String, using generator: LineGenerator) {
         let previousSelectedSlot = selectedSlot
-        let previouslyReplacing = replacing
-
         selectedSlot = name
-        replacing = true
 
+        append(node: .select(slot: name))
+        append(node: .clear)
         generator(self)
+        append(node: .select(slot: previousSelectedSlot))
 
         selectedSlot = previousSelectedSlot
-        replacing = previouslyReplacing
     }
 
     func render() -> String {
-        resolve([:]).compactMap(\.asString).joined()
+        resolve(SwiftSlotStorage()).compactMap(\.asString).joined()
     }
 
-    func resolve(_ slots: [String: [LineCommand]]) -> [LineCommand] {
-        let contents = if case let .extending(commands, templates) = type {
-            transformExtends(commands, templates)
-        } else {
-            contents
-        }
-        let (flattenedLines, outerSlots) = resolveOuterSlots(contents, slots)
-        let (preIncludeLines, innerSlots) = resolveInnerSlots(flattenedLines, outerSlots)
-        let postIncludeLines = resolveIncludes(preIncludeLines, innerSlots)
+    func resolve(_ slots: SwiftSlotStorage) -> [SwiftLineCommand] {
+        slots.resolve()
+        resolveExtends()
+        var lines = resolveOuterSlots(commands: contents, slots: slots)
+        lines = resolveInnerSlots(commands: lines, slots: slots)
+        lines = resolveIncludes(commands: lines, slots: slots)
 
-        return postIncludeLines
+        return lines
     }
 
-    func resolveOuterSlots(_ contents: [LineCommand], _ slots: [String: [LineCommand]]) -> (lines: [LineCommand], slots: [String: [LineCommand]]) {
-        var consumedSlots: [String] = []
-        var result: [LineCommand] = []
+    func resolveOuterSlots(commands: [SwiftLineCommand], slots: SwiftSlotStorage) -> [SwiftLineCommand] {
+        var result: [SwiftLineCommand] = []
+        var including = [true]
 
-        guard !contents.isEmpty else { return (lines: [], slots: slots) }
-
-        for command in contents {
-            if case let .declare(name, generator) = command {
-                if let item = slots[name] {
-                    if !consumedSlots.contains(name) {
-                        consumedSlots.append(name)
-                    }
-                    // A slot declaration right inside the default slot content would be ignored
-                    // It is ok to have nested slot declaration if it is inside an include
-                    result.append(contentsOf: item.filter { if case .declare = $0 { false } else { true } })
-                } else if let generator {
-                    let storage = SwiftLineStorage(normal: [])
-                    generator(storage)
-                    // A slot declaration right inside the default slot content would be ignored
-                    // It is ok to have nested slot declaration if it is inside an include
-                    result.append(contentsOf: storage.contents.filter { if case .declare = $0 { false } else { true } })
-                }
-            } else {
-                result.append(command)
-            }
-        }
-
-        let slots = slots.filter { !consumedSlots.contains($0.key) }
-
-        return (lines: result, slots: slots)
-    }
-
-    func resolveInnerSlots(_ commands: [LineCommand], _ slots: [String: [LineCommand]]) -> (lines: [LineCommand], slots: [String: [LineCommand]]) {
-        var slots = slots
-        var result: [LineCommand] = []
+        var unavailable: [String] = []
 
         for command in commands {
-            if case let .text(value, slot, replace) = command {
-                if let name = slot {
-                    var slot: [LineCommand] = if replace { [] } else if let slot = slots[name] { slot } else { [] }
-                    slot.append(.text(value: value, slot: nil, replace: false))
-                    slots[name] = slot
+            if case let .declare(name) = command {
+                if unavailable.contains(name) {
+                    ()
+                } else if let slot = slots.find(name: name) {
+                    slots.consume(name: name)
+                    result.append(contentsOf: slot)
+                }
+            } else if case let .startDeclareWithDefaults(name: name) = command {
+                if unavailable.contains(name) {
+                    including.append(true)
+                } else if let slot = slots.find(name: name) {
+                    slots.consume(name: name)
+                    result.append(contentsOf: slot)
+                    including.append(false)
                 } else {
+                    including.append(true)
+                }
+                unavailable.append(name)
+            } else if case .endDeclareWithDefaults = command {
+                unavailable.removeLast()
+                including.removeLast()
+            } else {
+                guard let last = including.last else { continue }
+
+                if last {
                     result.append(command)
                 }
-            } else {
-                result.append(command)
-            }
-        }
-
-        return (lines: result, slots: slots)
-    }
-
-    func resolveIncludes(_ commands: [LineCommand], _ slots: [String: [LineCommand]]) -> [LineCommand] {
-        var result: [LineCommand] = []
-
-        for line in commands {
-            if case let .include(storage, generator) = line {
-                if let generator {
-                    var slots = slots
-                    let defaults = SwiftLineStorage(normal: [])
-                    generator(defaults)
-
-                    for content in defaults.contents {
-                        if case let .text(value, slot, replace) = content {
-                            let name = slot ?? "default"
-                            var slot: [LineCommand] = if replace { [] } else if let slot = slots[name] { slot } else { [] }
-                            slot.append(.text(value: value, slot: nil, replace: false))
-                            slots[name] = slot
-                        } else {
-                            var slot: [LineCommand] = if let slot = slots["default"] { slot } else { [] }
-                            slot.append(content)
-                            slots["default"] = slot
-                        }
-                    }
-
-                    result.append(contentsOf: storage.resolve(slots))
-                } else {
-                    result.append(contentsOf: storage.resolve(slots))
-                }
-            } else {
-                result.append(line)
             }
         }
 
         return result
     }
 
-    func transformExtends(_ commands: [LineCommand], _ templates: [SwiftLineStorage]) -> [LineCommand] {
-        func generateGenerator(for commands: [LineCommand]) -> LineGenerator {
-            func outerGenerator(_ storage: SwiftLineStorage) {
-                switch storage.type {
-                case .empty:
-                    storage.type = .normal(contents: commands)
-                case var .normal(contents):
-                    contents.append(contentsOf: commands)
-                    storage.type = .normal(contents: contents)
-                case .extending(var contents, let templates):
-                    contents.append(contentsOf: commands)
-                    storage.type = .extending(contents: contents, templates: templates)
+    func resolveInnerSlots(commands: [SwiftLineCommand], slots: SwiftSlotStorage) -> [SwiftLineCommand] {
+        var result: [SwiftLineCommand] = []
+
+        // Tmp data
+        var selectedSlot: String?
+        var insideInclude = 0
+        var slot: [SwiftLineCommand] = []
+
+        for command in commands {
+            switch command {
+            case .text, .declare, .startDeclareWithDefaults, .endDeclareWithDefaults, .include:
+                if selectedSlot != nil {
+                    slot.append(command)
+                } else {
+                    result.append(command)
                 }
+            case .startIncludeWithDefaults:
+                if selectedSlot != nil {
+                    slot.append(command)
+                } else {
+                    result.append(command)
+                }
+                insideInclude += 1
+            case .endIncludeWithDefaults:
+                if selectedSlot != nil {
+                    slot.append(command)
+                } else {
+                    result.append(command)
+                }
+                insideInclude -= 1
+            case let .select(slot: name):
+                if insideInclude < 1 {
+                    if let selectedSlot {
+                        slots[selectedSlot] = slot
+                    }
+
+                    if let name, !name.isEmpty {
+                        slot = slots[name]
+                        selectedSlot = name
+                    } else {
+                        slot = []
+                        selectedSlot = nil
+                    }
+                } else if selectedSlot != nil {
+                    slot.append(command)
+                } else {
+                    result.append(command)
+                }
+            case .clear:
+                if insideInclude < 1 {
+                    if selectedSlot != nil {
+                        slot = []
+                    }
+                } else if selectedSlot != nil {
+                    slot.append(command)
+                }
+            case .noop:
+                ()
             }
-
-            return outerGenerator
         }
 
-        guard let last = templates.last else { return [] }
-        var lastInclude: LineCommand = .include(storage: last, generator: generateGenerator(for: commands))
-
-        let remainingTemplates = templates.dropLast().reversed()
-
-        guard !remainingTemplates.isEmpty else { return [lastInclude] }
-
-        for template in remainingTemplates {
-            lastInclude = .include(storage: template, generator: generateGenerator(for: [lastInclude]))
+        if let selectedSlot {
+            slots[selectedSlot] = slot
         }
 
-        return [lastInclude]
+        return result
     }
 
-    var contents: [LineCommand] {
+    func resolveIncludes(commands: [SwiftLineCommand], slots: SwiftSlotStorage) -> [SwiftLineCommand] {
+        var result: [SwiftLineCommand] = []
+
+        var stashedIncludes: [(SwiftLineStorage, [SwiftLineCommand])] = []
+
+        var currentIncludeStorage: SwiftLineStorage?
+        var currentIncludeCommands: [SwiftLineCommand] = []
+
+        for command in commands {
+            if case let .include(storage) = command {
+                result.append(contentsOf: storage.resolve(slots.innerSlots))
+            } else if case let .startIncludeWithDefaults(storage) = command {
+                if let currentIncludeStorage {
+                    stashedIncludes.append((currentIncludeStorage, currentIncludeCommands))
+                }
+
+                currentIncludeStorage = storage
+                currentIncludeCommands = []
+            } else if case .endIncludeWithDefaults = command {
+                var innerCommands: [SwiftLineCommand]
+
+                if let currentIncludeStorage {
+                    let innerSlots = slots.innerSlots
+                    innerSlots.unnamed = currentIncludeCommands
+                    innerCommands = currentIncludeStorage.resolve(innerSlots)
+                } else {
+                    innerCommands = []
+                }
+
+                if let (storage, commands) = stashedIncludes.popLast() {
+                    currentIncludeStorage = storage
+                    currentIncludeCommands = commands
+                    currentIncludeCommands.append(contentsOf: innerCommands)
+                } else {
+                    currentIncludeStorage = nil
+                    currentIncludeCommands = []
+                    result.append(contentsOf: innerCommands)
+                }
+            } else {
+                if let _ = currentIncludeStorage {
+                    currentIncludeCommands.append(command)
+                } else {
+                    result.append(command)
+                }
+            }
+        }
+
+        return result
+    }
+
+    func resolveExtends() {
+        switch type {
+        case .empty:
+            type = .normal(contents: [])
+        case .normal:
+            ()
+        case let .extending(contents, templates):
+            var result: [SwiftLineCommand] = []
+
+            for template in templates {
+                result.append(.startIncludeWithDefaults(storage: template))
+            }
+
+            if !contents.isEmpty {
+                result.append(contentsOf: contents)
+            }
+
+            for _ in 0 ..< templates.count {
+                result.append(.endIncludeWithDefaults)
+            }
+            type = .normal(contents: result)
+        }
+    }
+
+    var contents: [SwiftLineCommand] {
         switch type {
         case .empty:
             []
@@ -236,22 +292,8 @@ final class SwiftLineStorage {
         }
     }
 
-    convenience init(normal contents: [LineCommand]) {
+    convenience init(normal contents: [SwiftLineCommand]) {
         self.init()
         type = .normal(contents: contents)
-    }
-}
-
-extension SwiftLineStorage.LineCommand {
-    var asString: String? {
-        if case let .text(value, slot, replace) = self {
-            if slot == nil, !replace {
-                value
-            } else {
-                nil
-            }
-        } else {
-            nil
-        }
     }
 }
