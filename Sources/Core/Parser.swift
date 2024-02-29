@@ -138,7 +138,7 @@ extension Parser {
                 replaceSlotLine = v.text
             }
 
-            guard ifLine != nil || ifElseLine != nil || !elseLine || tagLine != nil || forLine != nil || addToSlotLine != nil || replaceSlotLine != nil else { return nil }
+            guard ifLine != nil || ifElseLine != nil || elseLine || tagLine != nil || forLine != nil || addToSlotLine != nil || replaceSlotLine != nil else { return nil }
 
             return .init(ifLine: ifLine, ifElseLine: ifElseLine, elseLine: elseLine, tagLine: tagLine, forLine: forLine, addToSlotLine: addToSlotLine, replaceSlotLine: replaceSlotLine)
         }
@@ -404,9 +404,9 @@ extension Parser {
         let condition: AST.EmbeddedCondition? = if let check = attributes.find("r-if") {
             .init(type: .ifType, check: check, name: conditionName)
         } else if let check = attributes.find("r-else-if") {
-            .init(type: .ifType, check: check, name: conditionName)
+            .init(type: .elseIfType, check: check, name: conditionName)
         } else if attributes.has("r-else") {
-            .init(type: .ifType, check: "", name: conditionName)
+            .init(type: .elseType, check: "", name: conditionName)
         } else {
             nil
         }
@@ -472,9 +472,9 @@ extension Parser {
         let condition: AST.EmbeddedCondition? = if let check = attributes.find("r-if") {
             .init(type: .ifType, check: check, name: conditionName)
         } else if let check = attributes.find("r-else-if") {
-            .init(type: .ifType, check: check, name: conditionName)
+            .init(type: .elseIfType, check: check, name: conditionName)
         } else if attributes.has("r-else") {
-            .init(type: .ifType, check: "", name: conditionName)
+            .init(type: .elseType, check: "", name: conditionName)
         } else {
             nil
         }

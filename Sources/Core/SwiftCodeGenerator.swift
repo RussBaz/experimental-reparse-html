@@ -47,7 +47,7 @@ public final class SwiftCodeGenerator {
         }
         properties.append(at: indentation + 1) {
             if self.properties.modifiersPresent {
-                ["var attributes = SwiftAttributeStorage()"]
+                ["var attributes: SwiftAttributeStorage"]
             } else {
                 []
             }
@@ -203,6 +203,8 @@ public final class SwiftCodeGenerator {
             innerGenerator.generateBody(at: indentation + 1)
 
             properties.append("\(name) = true", at: indentation + 1)
+            properties.append("} else {", at: indentation)
+            properties.append("\(name) = false", at: indentation + 1)
             properties.append("}", at: indentation)
         case let .loop(forEvery, name, contents):
             guard !contents.isEmpty else { return }
@@ -244,7 +246,9 @@ public final class SwiftCodeGenerator {
                             properties.append("if !\(cn) {", at: indentation)
                         }
                         properties.append("attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: false)", at: indentation + 1)
-                        properties.append("\(name) = true", at: indentation + 1)
+                        properties.append("\(cn) = true", at: indentation + 1)
+                        properties.append("} else {", at: indentation)
+                        properties.append("\(cn) = false", at: indentation + 1)
                         properties.append("}", at: indentation)
                     } else {
                         properties.append("attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: false)", at: indentation)
@@ -262,7 +266,9 @@ public final class SwiftCodeGenerator {
                             properties.append("if !\(cn) {", at: indentation)
                         }
                         properties.append("attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: true)", at: indentation + 1)
-                        properties.append("\(name) = true", at: indentation + 1)
+                        properties.append("\(cn) = true", at: indentation + 1)
+                        properties.append("} else {", at: indentation)
+                        properties.append("\(cn) = false", at: indentation + 1)
                         properties.append("}", at: indentation)
                     } else {
                         properties.append("attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: true)", at: indentation)
@@ -280,7 +286,7 @@ public final class SwiftCodeGenerator {
                             properties.append("if !\(cn) {", at: indentation)
                         }
                         properties.append("attributes.remove(\"\(name)\")", at: indentation + 1)
-                        properties.append("\(name) = true", at: indentation + 1)
+                        properties.append("\(cn) = true", at: indentation + 1)
                         properties.append("}", at: indentation)
                     } else {
                         properties.append("attributes.remove(\"\(name)\")", at: indentation)
@@ -304,15 +310,15 @@ public final class SwiftCodeGenerator {
         case let .eval(line):
             properties.append("lines.append(\"\\(\(line.trimmingCharacters(in: .whitespacesAndNewlines)))\")", at: indentation)
         case let .value(of: name, defaultValue):
-            let defaultValue = defaultValue ?? ""
-
             properties.append(at: indentation) {
                 if let _ = self.properties.defaultValues[name] {
                     ["lines.append(\"\\(\(name))\")"]
                 } else if self.properties.conditionTags.contains(name) {
                     ["lines.append(\"\\(\(name))\")"]
-                } else {
+                } else if let defaultValue {
                     ["lines.append(\"\\(\(name) ?? \"\(defaultValue)\")\")"]
+                } else {
+                    ["lines.append(\"\\(\(name))\")"]
                 }
             }
         case let .assignment(name, line):

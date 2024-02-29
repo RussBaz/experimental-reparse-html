@@ -1,12 +1,24 @@
+<r-require name="names" type="[String]" label="superheroes" />
 <r-extend name="base" />
-<body>
-    <r-set name="class" value="blue" append />
-    <h1>
-        Hello
-        <r-include name="components.world">
-            23+4+ <r-eval line="253-2" />
-        </r-include>
-    </h1>
-    <p><r-value of="req.url.string" /></p>
-</body>
-<title r-add-to-slot="head">New</title>
+<r-extend name="body" />
+
+<main>
+  <h1>
+    Hello
+    <r-include name="components.world" r-if="!(names?.isEmpty ?? true)">
+      Ultra Heroes!
+    </r-include>
+    <r-block r-else> World?</r-block>
+  </h1>
+  <ol>
+    <li r-for-every="names">
+      <p>
+        Hi, <r-item /> [index: <r-index />] or +1 = <r-eval line="index+1" />
+      </p>
+    </li>
+    <li r-else>No more heroes...</li>
+  </ol>
+
+  <p><r-value of="req.url.string" /></p>
+</main>
+<title r-add-to-slot="head">Hero List</title>

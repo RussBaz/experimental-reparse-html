@@ -47,7 +47,7 @@ public final class SwiftOutputBuilder {
         let topLine = """
         //
         // ------------------------------
-        // reparse version: 0.0.0
+        // reparse version: 0.0.1
         // ------------------------------
         // This is an auto-generated file
         // ------------------------------
@@ -120,7 +120,7 @@ public final class SwiftOutputBuilder {
 
     func buildPathFunc(for path: String, at indentation: Int = 0) -> String {
         """
-        \(String(repeating: "    ", count: indentation))static func path() -> String {
+        \(String(repeating: "    ", count: indentation))static var path: String {
         \(String(repeating: "    ", count: indentation))    \"\"\"
         \(String(repeating: "    ", count: indentation))    \(path)
         \(String(repeating: "    ", count: indentation))    \"\"\"
