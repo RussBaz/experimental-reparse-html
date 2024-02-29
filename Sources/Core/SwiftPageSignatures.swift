@@ -1,11 +1,11 @@
-final class SwiftPageSignatures {
-    struct ParameterDef {
+public final class SwiftPageSignatures {
+    public struct ParameterDef {
         let type: String
         let name: String
         let label: String?
     }
 
-    struct PageSignature {
+    public struct PageSignature {
         let parameters: [ParameterDef]
         let includes: [String]
     }
@@ -43,7 +43,7 @@ final class SwiftPageSignatures {
         }
     }
 
-    static func shared(for pages: [PageDef], with parameters: [ParameterDef]) -> SwiftPageSignatures {
+    public static func shared(for pages: [PageDef], with parameters: [ParameterDef]) -> SwiftPageSignatures {
         let signatures = SwiftPageSignatures()
 
         for page in pages {
@@ -55,7 +55,7 @@ final class SwiftPageSignatures {
         return signatures
     }
 
-    static func shared(for pages: [PageDef], with parameters: [String]) -> SwiftPageSignatures {
+    public static func shared(for pages: [PageDef], with parameters: [String]) -> SwiftPageSignatures {
         let parameters = parameters.compactMap(ParameterDef.init)
 
         return SwiftPageSignatures.shared(for: pages, with: parameters)
@@ -150,7 +150,7 @@ extension SwiftPageSignatures.ParameterDef {
 
 extension SwiftPageSignatures.ParameterDef: Equatable {}
 extension SwiftPageSignatures.ParameterDef: LosslessStringConvertible {
-    init?(_ description: String) {
+    public init?(_ description: String) {
         let input = description.split(separator: ":")
         if input.count == 2 {
             let inputName = String(input[0].trimmingCharacters(in: .whitespacesAndNewlines))
@@ -176,7 +176,7 @@ extension SwiftPageSignatures.ParameterDef: LosslessStringConvertible {
         }
     }
 
-    var description: String {
+    public var description: String {
         if let label {
             "\(label):\(name):\(type)"
         } else {

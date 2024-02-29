@@ -1,3 +1,5 @@
+import ReparseRuntime
+
 public final class SwiftCodeGenerator {
     let data: ASTStorage
     let signatures: SwiftPageSignatures
@@ -121,7 +123,7 @@ public final class SwiftCodeGenerator {
                 properties.append("}", at: indentation)
             }
         case let .include(name, contents):
-            let name = ReparseHtml.splitFilenameIntoComponents(name, dropping: properties.fileExtension)
+            let name = splitFilenameIntoComponents(name, dropping: properties.fileExtension)
             if !name.isEmpty {
                 let name = name.joined(separator: ".")
                 signatures.append(include: name, to: properties.name)
@@ -145,7 +147,7 @@ public final class SwiftCodeGenerator {
             guard !name.isEmpty else { return }
 
             if let condition {
-                let name = ReparseHtml.splitFilenameIntoComponents(name, dropping: properties.fileExtension)
+                let name = splitFilenameIntoComponents(name, dropping: properties.fileExtension)
                     .joined(separator: ".")
 
                 signatures.append(include: name, to: properties.name)
@@ -171,7 +173,7 @@ public final class SwiftCodeGenerator {
 
                 properties.append("}", at: indentation)
             } else {
-                let name = ReparseHtml.splitFilenameIntoComponents(name, dropping: properties.fileExtension)
+                let name = splitFilenameIntoComponents(name, dropping: properties.fileExtension)
                     .joined(separator: ".")
 
                 signatures.append(include: name, to: properties.name)
@@ -224,7 +226,7 @@ public final class SwiftCodeGenerator {
             }
         case let .modifiers(applying: modifiers, tag: tag):
             guard !modifiers.isEmpty else { return }
-            let attributes = (tag.attributes ?? AttributeStorage()).codeString(at: indentation)
+            let attributes = (tag.attributes ?? SwiftAttributeStorage()).codeString
             properties.modifiersPresent = true
             properties.append("attributes = AttributeStorage.from(attributes: [\(attributes)])", at: indentation)
             for modifier in modifiers {

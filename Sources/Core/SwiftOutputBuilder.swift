@@ -1,5 +1,5 @@
-final class SwiftOutputBuilder {
-    struct RendererDef {
+public final class SwiftOutputBuilder {
+    public struct RendererDef {
         let path: String
         let name: String
         let properties: PageProperties
@@ -14,7 +14,7 @@ final class SwiftOutputBuilder {
     let fileExtension: String
     let signatures: SwiftPageSignatures
 
-    init(name: String, enumName: String, fileExtension: String, signatures: SwiftPageSignatures, at indentation: Int) {
+    public init(name: String, enumName: String, fileExtension: String, signatures: SwiftPageSignatures, at indentation: Int) {
         self.name = name
         self.enumName = enumName
         self.fileExtension = fileExtension
@@ -22,13 +22,13 @@ final class SwiftOutputBuilder {
         self.indentation = indentation
     }
 
-    func add(pages: [PageDef]) {
+    public func add(pages: [PageDef]) {
         for page in pages {
             add(page: page, name: page.name)
         }
     }
 
-    func add(page: PageDef, name: [String]) {
+    public func add(page: PageDef, name: [String]) {
         guard let fragmentName = name.last else { return }
 
         if name.count == 1 {
@@ -41,22 +41,38 @@ final class SwiftOutputBuilder {
         }
     }
 
-    func text(imports: [String] = []) -> String {
+    public func text(imports: [String] = []) -> String {
         signatures.resolve()
 
+        let topLine = """
+        //
+        // reparse version: 0.0.0
+        // ------------------------------
+        // This is an auto-generated file
+        // ------------------------------
+        //
+
+        import ReparseRuntime
+
+        """
+
         if imports.isEmpty {
-            return build()
+            return topLine + build()
         } else {
             var buffer = [String]()
             for i in imports {
                 buffer.append("import \(i)")
             }
 
-            return buffer.joined(separator: "\n") + "\n\n" + build()
+            if buffer.isEmpty {
+                return topLine + build()
+            } else {
+                return topLine + buffer.joined(separator: "\n") + "\n\n" + build()
+            }
         }
     }
 
-    func build() -> String {
+    public func build() -> String {
         let header = """
         \(String(repeating: "    ", count: indentation))enum \(name) {
         """
@@ -122,7 +138,7 @@ final class SwiftOutputBuilder {
     }
 }
 
-extension SwiftOutputBuilder.RendererDef {
+public extension SwiftOutputBuilder.RendererDef {
     init?(page: PageDef, signatures: SwiftPageSignatures, fileExtension ext: String, enumName: String, at indentation: Int) {
         guard let contents = try? String(contentsOfFile: page.path) else { return nil }
         guard let storage = Parser.parse(html: contents) else { return nil }

@@ -1,4 +1,4 @@
-final class SwiftSlotStorage {
+public final class SwiftSlotStorage {
     var unnamed: [SwiftLineCommand] = []
     var named: [String: [SwiftLineCommand]] = [:]
 

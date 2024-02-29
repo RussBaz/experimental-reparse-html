@@ -8,3 +8,4 @@ DerivedData/
 .netrc
 .vscode
 .swiftpm
+Sources/Example/pages.swift

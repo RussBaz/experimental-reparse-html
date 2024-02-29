@@ -1,3 +1,5 @@
+import ReparseRuntime
+
 public indirect enum AST {
     case constant(contents: Contents)
     case slotDeclaration(name: String, defaults: ASTStorage)
@@ -17,8 +19,8 @@ public indirect enum AST {
     case noop
 
     public enum TagType {
-        case openingTag(name: String, attributes: AttributeStorage)
-        case voidTag(name: String, attributes: AttributeStorage)
+        case openingTag(name: String, attributes: SwiftAttributeStorage)
+        case voidTag(name: String, attributes: SwiftAttributeStorage)
         case closingTag(name: String)
     }
 
@@ -41,8 +43,8 @@ public indirect enum AST {
     }
 
     public enum AttributeModifier {
-        case append(name: String, value: AttributeStorage.AttributeValue, condition: EmbeddedCondition?)
-        case replace(name: String, value: AttributeStorage.AttributeValue, condition: EmbeddedCondition?)
+        case append(name: String, value: SwiftAttributeStorage.AttributeValue, condition: EmbeddedCondition?)
+        case replace(name: String, value: SwiftAttributeStorage.AttributeValue, condition: EmbeddedCondition?)
         case remove(name: String, condition: EmbeddedCondition?)
     }
 
@@ -77,7 +79,7 @@ extension AST.TagType {
         }
     }
 
-    var attributes: AttributeStorage? {
+    var attributes: SwiftAttributeStorage? {
         switch self {
         case let .openingTag(_, attributes):
             attributes

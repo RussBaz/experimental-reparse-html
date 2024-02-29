@@ -1,4 +1,4 @@
-public final class AttributeStorage {
+public final class SwiftAttributeStorage {
     public enum AttributeValue {
         case flag
         case string(String)
@@ -6,15 +6,17 @@ public final class AttributeStorage {
 
     var attributes: [String: AttributeValue] = [:]
 
-    func copy() -> AttributeStorage {
-        let storage = AttributeStorage()
+    public init() {}
+
+    public func copy() -> SwiftAttributeStorage {
+        let storage = SwiftAttributeStorage()
         for (key, value) in attributes {
             storage.attributes[key] = value
         }
         return storage
     }
 
-    func append(key: String, value: String, wrapped: Bool) {
+    public func append(key: String, value: String, wrapped: Bool) {
         if wrapped {
             attributes[key] = .string(value)
         } else {
@@ -26,7 +28,7 @@ public final class AttributeStorage {
         }
     }
 
-    func update(key: String, with value: AttributeValue, replacing: Bool) {
+    public func update(key: String, with value: AttributeValue, replacing: Bool) {
         if replacing {
             attributes[key] = value
         } else {
@@ -47,49 +49,40 @@ public final class AttributeStorage {
         }
     }
 
-    func has(_ name: String) -> Bool {
+    public func has(_ name: String) -> Bool {
         attributes[name] != nil
     }
 
-    func find(_ name: String) -> String? {
+    public func find(_ name: String) -> String? {
         attributes[name]?.text
     }
 
-    func value(of name: String) -> AttributeValue? {
-        attributes[name]
+    public subscript(name: String) -> AttributeValue? {
+        get {
+            attributes[name]
+        }
+        set {
+            if let newValue {
+                attributes[name] = newValue
+            } else {
+                attributes.removeValue(forKey: name)
+            }
+        }
     }
 
     @discardableResult
-    func remove(_ name: String) -> AttributeValue? {
+    public func remove(_ name: String) -> AttributeValue? {
         attributes.removeValue(forKey: name)
     }
 
-    static func from(attributes: [String: AttributeValue]) -> AttributeStorage {
-        let storage = AttributeStorage()
+    public static func from(attributes: [String: AttributeValue]) -> SwiftAttributeStorage {
+        let storage = SwiftAttributeStorage()
         storage.attributes = attributes
 
         return storage
     }
 
-    static func from(attributes: [String: (String, SimpleHtmlParser.AttributeValueWrapper)]) -> AttributeStorage {
-        let storage = AttributeStorage()
-        for (key, (value, wrapper)) in attributes {
-            if value.isEmpty {
-                if wrapper.isWrapped() {
-                    storage.attributes[key] = .string("")
-                } else {
-                    storage.attributes[key] = .flag
-                }
-
-            } else {
-                storage.attributes[key] = .string(value)
-            }
-        }
-
-        return storage
-    }
-
-    func codeString(at _: Int) -> String {
+    public var codeString: String {
         var lines: [String] = []
         for (key, value) in attributes {
             switch value {
@@ -103,7 +96,7 @@ public final class AttributeStorage {
     }
 }
 
-extension AttributeStorage: CustomStringConvertible {
+extension SwiftAttributeStorage: CustomStringConvertible {
     public var description: String {
         var result = ""
         for (key, attribute) in attributes {
@@ -118,7 +111,7 @@ extension AttributeStorage: CustomStringConvertible {
     }
 }
 
-extension AttributeStorage.AttributeValue {
+public extension SwiftAttributeStorage.AttributeValue {
     var text: String {
         switch self {
         case .flag:
@@ -139,9 +132,9 @@ extension AttributeStorage.AttributeValue {
     }
 }
 
-extension AttributeStorage.AttributeValue: Equatable {}
-extension AttributeStorage: Equatable {
-    public static func == (lhs: AttributeStorage, rhs: AttributeStorage) -> Bool {
+extension SwiftAttributeStorage.AttributeValue: Equatable {}
+extension SwiftAttributeStorage: Equatable {
+    public static func == (lhs: SwiftAttributeStorage, rhs: SwiftAttributeStorage) -> Bool {
         lhs.attributes == rhs.attributes
     }
 }

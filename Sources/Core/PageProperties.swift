@@ -1,4 +1,4 @@
-final class PageProperties {
+public final class PageProperties {
     enum LineType {
         case text(String)
         case deferred(() -> [String])

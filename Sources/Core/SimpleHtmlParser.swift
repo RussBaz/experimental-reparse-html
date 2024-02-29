@@ -1,4 +1,6 @@
-final class SimpleHtmlParser {
+import ReparseRuntime
+
+public final class SimpleHtmlParser {
     struct Element {
         let depth: Int
         let content: AST.Content
@@ -16,12 +18,12 @@ final class SimpleHtmlParser {
     enum State {
         case lookingForText(buffer: String)
         case lookingForTagName(name: String)
-        case lookingForAttributes(tag: String, attributes: AttributeStorage)
-        case lookingForAttributeName(tag: String, attributes: AttributeStorage, key: String)
-        case lookineForAttributeSeparator(tag: String, attributes: AttributeStorage, key: String)
-        case lookingForAttributeValueStart(tag: String, attributes: AttributeStorage, key: String)
-        case lookingForAttributeValue(tag: String, attributes: AttributeStorage, key: String, value: String, wrapper: AttributeValueWrapper)
-        case lookingForVoidTagEnd(tag: String, attributes: AttributeStorage)
+        case lookingForAttributes(tag: String, attributes: SwiftAttributeStorage)
+        case lookingForAttributeName(tag: String, attributes: SwiftAttributeStorage, key: String)
+        case lookineForAttributeSeparator(tag: String, attributes: SwiftAttributeStorage, key: String)
+        case lookingForAttributeValueStart(tag: String, attributes: SwiftAttributeStorage, key: String)
+        case lookingForAttributeValue(tag: String, attributes: SwiftAttributeStorage, key: String, value: String, wrapper: AttributeValueWrapper)
+        case lookingForVoidTagEnd(tag: String, attributes: SwiftAttributeStorage)
         case lookingForClosingTagName(name: String)
         case lookingForClosingTagEnd(name: String)
     }
@@ -106,15 +108,15 @@ final class SimpleHtmlParser {
             } else if name.isEmpty, char == " " || char == "\n" {
                 state = .lookingForTagName(name: name)
             } else if char == "/" {
-                state = .lookingForVoidTagEnd(tag: name, attributes: AttributeStorage())
+                state = .lookingForVoidTagEnd(tag: name, attributes: SwiftAttributeStorage())
             } else if !name.isEmpty, char == ">" {
-                appendTag(.openingTag(name: name, attributes: AttributeStorage()), till: index)
+                appendTag(.openingTag(name: name, attributes: SwiftAttributeStorage()), till: index)
             } else if !name.isEmpty, char == "-" || char == "." {
                 state = .lookingForTagName(name: name + String(char))
             } else if isAllowedInTags(char) {
                 state = .lookingForTagName(name: name + String(char))
             } else if char == " " || char == "\n", !name.isEmpty, name.last != "-", name.last != "." {
-                state = .lookingForAttributes(tag: name, attributes: AttributeStorage())
+                state = .lookingForAttributes(tag: name, attributes: SwiftAttributeStorage())
             } else {
                 cancelTag(till: index)
             }
@@ -461,5 +463,25 @@ extension SimpleHtmlParser.AttributeValueWrapper {
         } else {
             true
         }
+    }
+}
+
+extension SwiftAttributeStorage {
+    static func from(attributes: [String: (String, SimpleHtmlParser.AttributeValueWrapper)]) -> SwiftAttributeStorage {
+        let storage = SwiftAttributeStorage()
+        for (key, (value, wrapper)) in attributes {
+            if value.isEmpty {
+                if wrapper.isWrapped() {
+                    storage[key] = .string("")
+                } else {
+                    storage[key] = .flag
+                }
+
+            } else {
+                storage[key] = .string(value)
+            }
+        }
+
+        return storage
     }
 }

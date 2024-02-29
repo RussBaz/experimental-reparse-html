@@ -6,14 +6,10 @@
 
 import ArgumentParser
 import Foundation
-
-struct PageDef {
-    let path: String
-    let name: [String]
-}
+import ReparseCore
 
 @main
-struct ReparseHtml: ParsableCommand {
+struct Reparse: ParsableCommand {
     @Argument(help: "The target data folder location.", transform: URL.init(fileURLWithPath:))
     var location: URL
 
@@ -93,28 +89,10 @@ struct ReparseHtml: ParsableCommand {
             let url = URL(fileURLWithPath: "\(path)/\(i)")
             let path = url.path
             if path.hasSuffix(".\(ext)") {
-                htmls.append(.init(path: path, name: ReparseHtml.splitFilenameIntoComponents(i, dropping: ext).reversed()))
+                htmls.append(PageDef(path: path, name: splitFilenameIntoComponents(i, dropping: ext).reversed()))
             }
         }
 
         return htmls
-    }
-
-    static func splitFilenameIntoComponents(_ name: String, dropping ext: String) -> [String] {
-        var r = name.split(separator: "/")
-
-        if r.last?.hasSuffix(".\(ext)") == true {
-            r[r.count - 1] = r[r.count - 1].dropLast(5)
-        }
-
-        if r.isEmpty {
-            r = ["Index"]
-        }
-
-        if r.first == "" {
-            r[r.startIndex] = "Index"
-        }
-
-        return r.map(String.init).map(\.capitalized)
     }
 }

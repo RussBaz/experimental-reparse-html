@@ -1,5 +1,5 @@
-final class SwiftLineStorage {
-    typealias LineGenerator = (SwiftLineStorage) -> Void
+public final class SwiftLineStorage {
+    public typealias LineGenerator = (SwiftLineStorage) -> Void
 
     enum StorageType {
         case empty
@@ -11,7 +11,7 @@ final class SwiftLineStorage {
 
     var selectedSlot: String?
 
-    func extend(_ storage: SwiftLineStorage) {
+    public func extend(_ storage: SwiftLineStorage) {
         switch type {
         case .empty:
             type = .extending(contents: [], templates: [storage])
@@ -25,7 +25,7 @@ final class SwiftLineStorage {
         }
     }
 
-    func append(node: SwiftLineCommand) {
+    public func append(node: SwiftLineCommand) {
         switch type {
         case .empty:
             type = .normal(contents: [node])
@@ -38,11 +38,11 @@ final class SwiftLineStorage {
         }
     }
 
-    func append(_ text: String) {
+    public func append(_ text: String) {
         append(node: .text(value: text))
     }
 
-    func declare(slot name: String, using generator: LineGenerator? = nil) {
+    public func declare(slot name: String, using generator: LineGenerator? = nil) {
         if let generator {
             append(node: .startDeclareWithDefaults(name: name))
             generator(self)
@@ -52,7 +52,7 @@ final class SwiftLineStorage {
         }
     }
 
-    func include(_ storage: SwiftLineStorage, using generator: LineGenerator? = nil) {
+    public func include(_ storage: SwiftLineStorage, using generator: LineGenerator? = nil) {
         if let generator {
             append(node: .startIncludeWithDefaults(storage: storage))
             generator(self)
@@ -62,7 +62,7 @@ final class SwiftLineStorage {
         }
     }
 
-    func add(slot name: String, using generator: LineGenerator) {
+    public func add(slot name: String, using generator: LineGenerator) {
         let previousSelectedSlot = selectedSlot
         selectedSlot = name
 
@@ -73,7 +73,7 @@ final class SwiftLineStorage {
         selectedSlot = previousSelectedSlot
     }
 
-    func replace(slot name: String, using generator: LineGenerator) {
+    public func replace(slot name: String, using generator: LineGenerator) {
         let previousSelectedSlot = selectedSlot
         selectedSlot = name
 
@@ -85,7 +85,7 @@ final class SwiftLineStorage {
         selectedSlot = previousSelectedSlot
     }
 
-    func render() -> String {
+    public func render() -> String {
         resolve(SwiftSlotStorage()).compactMap(\.asString).joined()
     }
 
@@ -292,7 +292,9 @@ final class SwiftLineStorage {
         }
     }
 
-    convenience init(normal contents: [SwiftLineCommand]) {
+    public init() {}
+
+    public convenience init(normal contents: [SwiftLineCommand]) {
         self.init()
         type = .normal(contents: contents)
     }

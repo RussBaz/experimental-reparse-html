@@ -1,6 +1,7 @@
 import Foundation
+import ReparseRuntime
 
-final class Parser {
+public final class Parser {
     let ast = ASTStorage()
     var closeDepth: [Int: Int] = [:]
     var ignoringUntilDepth: Int?
@@ -93,7 +94,7 @@ extension Parser {
             var replaceSlotLine: String?
 
             let name: String
-            let attributes: AttributeStorage
+            let attributes: SwiftAttributeStorage
 
             switch e {
             case let .openingTag(n, a):
@@ -104,7 +105,7 @@ extension Parser {
                 attributes = a
             case let .closingTag(n):
                 name = n
-                attributes = AttributeStorage()
+                attributes = SwiftAttributeStorage()
             }
 
             guard name != "r-set", name != "r-unset", name != "r-require", name != "r-extend" else { return nil }
@@ -394,7 +395,7 @@ extension Parser {
         guard tag.isVoid else { ignoringUntilDepth = depth; return }
         guard let attributes = tag.attributes else { return }
         guard let name = attributes.find("name") else { return }
-        guard let attributeValue = attributes.value(of: "value") else { return }
+        guard let attributeValue = attributes["value"] else { return }
 
         let appending = if attributes.has("append") { true } else { false }
 

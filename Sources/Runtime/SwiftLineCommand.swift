@@ -1,4 +1,4 @@
-enum SwiftLineCommand {
+public enum SwiftLineCommand {
     case text(value: String)
     case declare(name: String)
     case startDeclareWithDefaults(name: String)
