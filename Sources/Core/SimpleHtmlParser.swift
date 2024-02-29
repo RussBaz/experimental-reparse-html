@@ -48,10 +48,8 @@ public final class SimpleHtmlParser {
 
         nodes = []
 
-//        print("State: \(state), last: \(String(describing: nodes.last))")
         for c in input {
             parseCharacter(char: c, at: index)
-//            print("State: \(state), last: \(String(describing: nodes.last))")
             index = input.index(after: index)
         }
 
@@ -232,7 +230,7 @@ public final class SimpleHtmlParser {
             } else if !name.isEmpty, char == ">" {
                 appendTag(.closingTag(name: name), till: index)
             } else if !name.isEmpty, char == "-" || char == "." {
-                state = .lookingForTagName(name: name + String(char))
+                state = .lookingForClosingTagName(name: name + String(char))
             } else if isAllowedInTags(char) {
                 state = .lookingForClosingTagName(name: name + String(char))
             } else {

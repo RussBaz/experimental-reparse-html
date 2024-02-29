@@ -47,7 +47,7 @@ public final class SwiftCodeGenerator {
         }
         properties.append(at: indentation + 1) {
             if self.properties.modifiersPresent {
-                ["var attributes = AttributeStorage()"]
+                ["var attributes = SwiftAttributeStorage()"]
             } else {
                 []
             }
@@ -228,7 +228,7 @@ public final class SwiftCodeGenerator {
             guard !modifiers.isEmpty else { return }
             let attributes = (tag.attributes ?? SwiftAttributeStorage()).codeString
             properties.modifiersPresent = true
-            properties.append("attributes = AttributeStorage.from(attributes: [\(attributes)])", at: indentation)
+            properties.append("attributes = SwiftAttributeStorage.from(attributes: [\(attributes)])", at: indentation)
             for modifier in modifiers {
                 switch modifier {
                 case let .append(name: name, value: value, condition: condition):

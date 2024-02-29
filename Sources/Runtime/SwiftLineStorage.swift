@@ -217,7 +217,11 @@ public final class SwiftLineStorage {
 
         for command in commands {
             if case let .include(storage) = command {
-                result.append(contentsOf: storage.resolve(slots.innerSlots))
+                if let _ = currentIncludeStorage {
+                    currentIncludeCommands.append(contentsOf: storage.resolve(slots.innerSlots))
+                } else {
+                    result.append(contentsOf: storage.resolve(slots.innerSlots))
+                }
             } else if case let .startIncludeWithDefaults(storage) = command {
                 if let currentIncludeStorage {
                     stashedIncludes.append((currentIncludeStorage, currentIncludeCommands))

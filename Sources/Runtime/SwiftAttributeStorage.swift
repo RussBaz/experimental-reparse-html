@@ -92,7 +92,12 @@ public final class SwiftAttributeStorage {
                 lines.append("\"\(key)\": .string(\"\(v)\")")
             }
         }
-        return lines.joined(separator: ", ")
+
+        if lines.isEmpty {
+            return ":"
+        } else {
+            return lines.joined(separator: ", ")
+        }
     }
 }
 

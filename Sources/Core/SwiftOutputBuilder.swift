@@ -46,6 +46,7 @@ public final class SwiftOutputBuilder {
 
         let topLine = """
         //
+        // ------------------------------
         // reparse version: 0.0.0
         // ------------------------------
         // This is an auto-generated file
@@ -108,7 +109,7 @@ public final class SwiftOutputBuilder {
         let include = signatures.parameters(of: page.properties.name).map(\.asParameter).joined(separator: ", ")
         return """
         \(String(repeating: "    ", count: indentation))static func render(\(signature)) -> String {
-        \(String(repeating: "    ", count: indentation))    Self.include(\(include)).render()
+        \(String(repeating: "    ", count: indentation))    include(\(include)).render()
         \(String(repeating: "    ", count: indentation))}
         """
     }
