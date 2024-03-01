@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "ReparseHtml",
+    name: "experimental-reparse-html",
     platforms: [
         .macOS(.v13),
     ],
