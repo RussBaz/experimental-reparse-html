@@ -3,22 +3,23 @@
 <r-extend name="body" />
 
 <main>
-  <h1>
-    Hello
-    <r-include name="components.world" r-if="!(names?.isEmpty ?? true)">
-      Ultra Heroes!
-    </r-include>
-    <r-block r-else> World?</r-block>
-  </h1>
-  <ol>
-    <li r-for-every="names">
-      <p>
-        Hi, <r-item /> [index: <r-index />] or +1 = <r-eval line="index+1" />
-      </p>
-    </li>
-    <li r-else>No more heroes...</li>
-  </ol>
+    <h1>
+        Hello
+        <r-include name="components.world" r-if="!(names?.isEmpty ?? true)">
+            Ultra Heroes!
+        </r-include>
+        <r-block r-else> World?</r-block>
+    </h1>
+    <ol>
+        <li r-for-every="names">
+            <p>
+                Hi, <r-item /> [index: <r-index />] or +1 =
+                <r-eval line="index+1" />
+            </p>
+        </li>
+        <li r-else>No more heroes...</li>
+    </ol>
 
-  <p><r-value of="req.url.string" /></p>
+    <p><r-value of="req.url.string" /></p>
 </main>
 <title r-add-to-slot="head">Hero List</title>

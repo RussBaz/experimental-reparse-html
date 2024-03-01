@@ -32,9 +32,9 @@ There are a few types of control attributes and can be separated in 3 groups:
 
 Most html tags can be equipped with one of the conditional control attributes:
 
-- **r-if="condition"**
-- **r-else-if="condition"**
-- **r-else**
+-   **r-if="condition"**
+-   **r-else-if="condition"**
+-   **r-else**
 
 If the condition (which must be a valid Swift expression) is satisfied than the html tag and its contents are rendered.
 
@@ -42,28 +42,65 @@ If the condition is satisfied, then a special variable called `previousUnnamedIf
 
 Optionally, you can save the result of the condition to a different variable using an additional attribute:
 
-- **r-tag="tag-name"**
+-   **r-tag="tag-name"**
 
 #### Loops
 
-- **r-for-every="sequence"**
+-   **r-for-every="sequence"**
 
 #### Slots
 
-- **r-add-to-slot="slot-name"**
-- **r-replace-slot="slot-name"**
+-   **r-add-to-slot="slot-name"**
+-   **r-replace-slot="slot-name"**
 
 ### Control Tags
 
-- **r-extend** (must be before any tag other than r-require)
-- **r-require** (must be before any tag other than r-extend)
-- **r-include**
-- **r-block**
-- **r-set**
-- **r-unset**
-- **r-var**
-- **r-value**
-- **r-eval**
-- **r-slot**
-- **r-index** (inside the loops only)
-- **r-value** (inside the loops only)
+-   **`<r-extend name="template-name" />`** (must be before any tag other than r-require) to wrap the current template into a default slot of the specified template
+-   **`<r-require label="optional-label" name="var-name" type="var-type" default="optional-default" />`** (must be before any tag other than r-extend) to define a variable that must be passed into the template from the caller
+-   **`<r-include name="template-name" />`** to include another template or
+-   **`<r-include name="template-name"> default slot </r-include>`** to include a template with a default slot provided
+-   **`<r-block> some data </r-block>`** to group some part of template, e.g. wrap some text with it and now you can apply control attributes to it.
+-   **`<r-set name="attr-name" value="attr-value" />`** to replace an attribute in a preceding tag (skipping other set/unset tags) or
+-   **`<r-set name="attr-name" value="attr-value" append />`** to append to it instead
+-   **`<r-unset name="attr-name" />`** to remove an atttribute from a preceding tag (skipping other set/unset tags)
+-   **`<r-var name="var-name" line="expression" />`** to assign the result of an expression to a variable
+-   **`<r-value of="name" default="optional-val" />`** to paste the value of the specified variable or the provided default value if the value was `nil`
+-   **`<r-eval line="expression" />`** evaluate the expression and paste its result
+-   **`<r-slot name="optional-name" />`** to mark an area to be filled by the incoming outer slot. If no name is provided, it will be known as 'default' or
+-   **`<r-slot name="optional-name"> default slot </r-slot>`** to declare a slot and provide the default contents if no matching slot found in the incoming outer slots
+-   **`<r-index />`** (inside the loops only) to paste the index of the current iteration of the innermost loop
+-   **`<r-value />`** (inside the loops only) to paste the value of the current iteration of the innermost loop
+
+## How does it work?
+
+It operates in two stages. There is the compilation stage and the runtime stage.
+
+### Compilation Stage
+
+1. All the templates are discovered, and their names and full paths are recorded. The names are derived from the relative path to the root folder and the name of file.
+2. For each template, a tokeniser converts a stream of characters into a stream of tokens.
+3. The tokens are now parsed into an abstract syntax tree.
+4. The syntax tree is flattened and transpiled into a series of commands for a file builder. References between files and other meta data are recorded.
+5. Function signatures are resolved for every template
+6. All individual command sequences for every template are combined into a single one based and executed.
+7. The final string is saved into the specified location.
+
+### Runtime Stage
+
+#### Rendering the Template
+
+1. The caller passes the paremters to the render function.
+2. The render function passes them to the include function of the specified template.
+3. The include function returns the line storage object with a render method.
+4. Then the render method is called and it will call its resolve method with empty outer slots.
+5. The returned sequence of text constants is then merged into a string and returned to the caller.
+
+#### Resolving the Template
+
+1. Calling the template will call an auto generated function that builds a simple internal model for each template by calling a very limited number of its commands. (done when the include method is called)
+2. The slots are passed into the template and the default slot is resolved. The slots passed into the template are referred as outer slots. (done when the resolve method is called)
+3. All slot declaration sites (including the inside of include commands) are recuresively replaced with either contents of outer slots (if found) and mark them for deletion, or replaces with the defaults. It does nothing if neither are found. Nested declarations are allowed but if the parent 'comsumes' the slot, then it will no longer appear to the nested declarations. Sibling declarations do not have this restriction.
+4. Inner slots are computed - the slots to be passed to included templates. All the commands affecting the slots are resolved.
+5. Default inner slots are computed for every include command and passed into the specified templates. Nested includes are allowed.
+6. Resolved inner templates are merged into the current template
+7. The contents, now consisting of text constant commands only, are returned to the caller.
