@@ -8,6 +8,10 @@ let package = Package(
     platforms: [
         .macOS(.v13),
     ],
+    products: [
+        .executable(name: "reparse", targets: ["reparse"]),
+        .library(name: "ReparseRuntime", targets: ["ReparseRuntime"])
+    ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
         // 💧 A server-side Swift web framework.
