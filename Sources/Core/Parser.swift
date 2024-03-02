@@ -14,6 +14,7 @@ public final class Parser {
 
         guard ignoringUntilDepth == nil else { return }
 
+        // Only when dealing with the r-eval node that has no line attribute
         guard !nestedEvalMode else {
             append(eval: content)
             return

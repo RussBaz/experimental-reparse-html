@@ -25,7 +25,11 @@ func splitFilenameIntoComponents(_ name: String, dropping ext: String) -> [Strin
         r[r.startIndex] = "Index"
     }
 
-    return r.map { $0.split(whereSeparator: { $0 == " " || $0 == "-" }).map(\.capitalized).joined() }
+    return r.map {
+        $0.split(whereSeparator: { $0 == " " || $0 == "-" })
+            .map(\.capitalized)
+            .joined()
+    }
 }
 
 public enum ReparseCore {

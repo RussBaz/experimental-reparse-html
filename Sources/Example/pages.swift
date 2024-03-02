@@ -39,6 +39,32 @@ enum Pages {
                 return lines
             }
         }
+
+        enum HelloMe {
+            static var path: String {
+                """
+                /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/Components/hello-me.html
+                """
+            }
+
+            static func render(req: Request) -> String {
+                include(req: req).render()
+            }
+
+            static func include(req _: Request) -> SwiftLineStorage {
+                let lines = SwiftLineStorage()
+                lines.append("""
+                Hello, 
+                """)
+                lines.declare(slot: "default") { lines in
+                    lines.append("""
+                    Friend!
+                    """)
+                }
+
+                return lines
+            }
+        }
     }
 
     enum Index {
@@ -60,19 +86,10 @@ enum Pages {
             lines.extend(Pages.Body.include(req: req, value: value))
             lines.append("""
             <main>
-            <h1>
-                    Hello
+              <h1>
+                Hello
+
             """)
-            if !(names?.isEmpty ?? true) {
-                lines.include(Pages.Components.World.include(req: req)) { lines in
-                    lines.append("""
-                                Ultra Heroes!
-                    """)
-                }
-                previousUnnamedIfTaken = true
-            } else {
-                previousUnnamedIfTaken = false
-            }
             if !previousUnnamedIfTaken {
                 lines.append("""
                  World?
@@ -82,15 +99,16 @@ enum Pages {
                 previousUnnamedIfTaken = false
             }
             lines.append("""
-            </h1>
-            <ol>
+              </h1>
+              <ol>
+
             """)
             if let names {
                 for (index, item) in names.enumerated() {
                     lines.append("""
                     <li>
-                    <p>
-                                    Hi, 
+                          <p>
+                            Hi, 
                     """)
                     lines.append("\(item)")
                     lines.append("""
@@ -99,11 +117,12 @@ enum Pages {
                     lines.append("\(index)")
                     lines.append("""
                     ] or +1 =
+
                     """)
                     lines.append("\(index + 1)")
                     lines.append("""
-                    </p>
-                    </li>
+                          </p>
+                        </li>
                     """)
                 }
                 previousUnnamedIfTaken = if names.isEmpty { false } else { true }
@@ -119,8 +138,8 @@ enum Pages {
                 previousUnnamedIfTaken = false
             }
             lines.append("""
-            </ol>
-            <p>
+              </ol>
+              <p>
             """)
             lines.append("\(req.url.string)")
             lines.append("""
@@ -153,12 +172,14 @@ enum Pages {
             lines.append("""
             <!DOCTYPE html>
             <html lang="en">
-            <head>
-            <meta charset="utf-8"/>
+                <head>
+                    <meta charset="utf-8"/>
+
             """)
             lines.declare(slot: "head")
             lines.append("""
-            </head>
+                </head>
+
             """)
             lines.declare(slot: "default")
             lines.append("""

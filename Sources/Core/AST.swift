@@ -193,25 +193,15 @@ extension AST.Contents {
             current += 1
 
             guard let previousItem, let nextItem else {
-                if currentItem.isEmpty {
-                    return "\n"
-                } else {
-                    let r = currentItem.text()
-                    return r
-                }
+                return currentItem.text()
             }
 
+            // What was I trying to do here?
             if case .tag(.openingTag) = previousItem, case .tag(.closingTag) = nextItem {
-                let r = currentItem.text()
-                return r
+                return currentItem.text()
             }
 
-            if currentItem.isEmpty {
-                return "\n"
-            } else {
-                let r = currentItem.text()
-                return r
-            }
+            return currentItem.text()
         }
     }
 

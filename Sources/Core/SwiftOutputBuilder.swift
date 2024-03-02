@@ -143,7 +143,7 @@ public final class SwiftOutputBuilder {
 
         if protocols.isEmpty {
             return """
-            \(String(repeating: "    ", count: indentation))enum \(page.name.capitalized) {
+            \(String(repeating: "    ", count: indentation))enum \(page.name) {
             \(buildPathFunc(for: page.path, at: indentation + 1))
             \(buildRenderFunc(for: page, at: indentation + 1))
             \(buildIncludeFunc(for: page))
@@ -151,7 +151,7 @@ public final class SwiftOutputBuilder {
             """
         } else if associatedTypes.isEmpty {
             return """
-            \(String(repeating: "    ", count: indentation))struct \(page.name.capitalized)\(protocols) {
+            \(String(repeating: "    ", count: indentation))struct \(page.name)\(protocols) {
             \(buildPathFunc(for: page.path, at: indentation + 1))
             \(buildRenderFunc(for: page, at: indentation + 1))
             \(buildIncludeFunc(for: page))
@@ -159,7 +159,7 @@ public final class SwiftOutputBuilder {
             """
         } else {
             return """
-            \(String(repeating: "    ", count: indentation))struct \(page.name.capitalized)\(protocols) {
+            \(String(repeating: "    ", count: indentation))struct \(page.name)\(protocols) {
             \(associatedTypes)\(buildPathFunc(for: page.path, at: indentation + 1))
             \(buildRenderFunc(for: page, at: indentation + 1))
             \(buildIncludeFunc(for: page))
