@@ -25,16 +25,17 @@ func splitFilenameIntoComponents(_ name: String, dropping ext: String) -> [Strin
         r[r.startIndex] = "Index"
     }
 
-    return r.map(String.init).map(\.capitalized)
+    return r.map { $0.split(whereSeparator: { $0 == " " || $0 == "-" }).map(\.capitalized).joined() }
 }
 
 public enum ReparseCore {
-    public static func run(locations: [String], parameters: [String], imports: [String], fileExtension: String, outFolder: String, outName: String, enumName: String, dryRun: Bool) throws {
+    public static func run(locations: [String], parameters: [String], imports: [String], protocols: [String], fileExtension: String, outFolder: String, outName: String, enumName: String, dryRun: Bool) throws {
         let htmls = findAllFiles(in: locations, searching: fileExtension)
 
         let signatures = SwiftPageSignatures.shared(for: htmls, with: parameters)
+        let protocols = protocols.map(PageProperties.ProtocolCompliance.init).compactMap { $0 }
 
-        let builder = SwiftOutputBuilder(name: enumName, enumName: enumName, fileExtension: fileExtension, signatures: signatures, at: 0)
+        let builder = SwiftOutputBuilder(name: enumName, enumName: enumName, fileExtension: fileExtension, signatures: signatures, protocols: protocols, at: 0)
 
         builder.add(pages: htmls)
 

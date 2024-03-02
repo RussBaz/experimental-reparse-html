@@ -24,6 +24,9 @@ struct Reparse: ParsableCommand {
 
     @Option(help: "List of shared parameters (parameters to be added to every 'include' function) in a form of 'label:name:type' or 'name:type'")
     var parameters: [String] = []
+    
+    @Option(help: "A list of protocols to apply to enums with render functions in them in a form of 'name[:associatedName:associatedType]'. Optional part can be repeated any number of times.")
+    var protocols: [String] = []
 
     @Flag(help: "Write the output to the console instead of file")
     var dryRun = false
@@ -37,6 +40,6 @@ struct Reparse: ParsableCommand {
             throw ValidationError("Folder does not exist at \(destination.path)")
         }
 
-        try ReparseCore.run(locations: [location.path], parameters: parameters, imports: imports, fileExtension: fileExtension, outFolder: destination.path, outName: fileName, enumName: enumName, dryRun: dryRun)
+        try ReparseCore.run(locations: [location.path], parameters: parameters, imports: imports, protocols: protocols, fileExtension: fileExtension, outFolder: destination.path, outName: fileName, enumName: enumName, dryRun: dryRun)
     }
 }

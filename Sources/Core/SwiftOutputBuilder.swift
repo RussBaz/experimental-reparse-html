@@ -13,13 +13,15 @@ public final class SwiftOutputBuilder {
     let enumName: String
     let fileExtension: String
     let signatures: SwiftPageSignatures
+    let protocols: [PageProperties.ProtocolCompliance]
 
-    public init(name: String, enumName: String, fileExtension: String, signatures: SwiftPageSignatures, at indentation: Int) {
+    public init(name: String, enumName: String, fileExtension: String, signatures: SwiftPageSignatures, protocols: [PageProperties.ProtocolCompliance], at indentation: Int) {
         self.name = name
         self.enumName = enumName
         self.fileExtension = fileExtension
         self.signatures = signatures
         self.indentation = indentation
+        self.protocols = protocols
     }
 
     public func add(pages: [PageDef]) {
@@ -32,10 +34,10 @@ public final class SwiftOutputBuilder {
         guard let fragmentName = name.last else { return }
 
         if name.count == 1 {
-            guard let renderer = RendererDef(page: page, signatures: signatures, fileExtension: fileExtension, enumName: enumName, at: indentation + 1) else { return }
+            guard let renderer = RendererDef(page: page, signatures: signatures, protocols: protocols, fileExtension: fileExtension, enumName: enumName, at: indentation + 1) else { return }
             pages.append(renderer)
         } else {
-            let child = children[fragmentName] ?? SwiftOutputBuilder(name: fragmentName, enumName: enumName, fileExtension: fileExtension, signatures: signatures, at: indentation + 1)
+            let child = children[fragmentName] ?? SwiftOutputBuilder(name: fragmentName, enumName: enumName, fileExtension: fileExtension, signatures: signatures, protocols: protocols, at: indentation + 1)
             child.add(page: page, name: name.dropLast())
             children[fragmentName] = child
         }
@@ -47,7 +49,7 @@ public final class SwiftOutputBuilder {
         let topLine = """
         //
         // ------------------------------
-        // reparse version: 0.0.1
+        // reparse version: 0.0.4
         // ------------------------------
         // This is an auto-generated file
         // ------------------------------
@@ -129,24 +131,54 @@ public final class SwiftOutputBuilder {
     }
 
     func buildPageEnum(for page: RendererDef, at indentation: Int = 0) -> String {
-        """
-        \(String(repeating: "    ", count: indentation))enum \(page.name.capitalized) {
-        \(buildPathFunc(for: page.path, at: indentation + 1))
-        \(buildRenderFunc(for: page, at: indentation + 1))
-        \(buildIncludeFunc(for: page))
-        \(String(repeating: "    ", count: indentation))}
-        """
+        let protocols: String = if page.properties.protocols.isEmpty { "" } else { ": \(page.properties.protocols.map({ $0.asDeclaration }).joined(separator: ", "))" }
+        let associatedTypes: String
+        
+        if page.properties.protocols.isEmpty {
+            associatedTypes = ""
+        } else {
+            associatedTypes = page.properties.protocols
+                .flatMap({ $0.asAssociatedType })
+                .map({ "\(String(repeating: "    ", count: indentation+1))\($0)" })
+                .joined(separator: "\n") + "\n\n"
+        }
+        
+        if protocols.isEmpty {
+            return """
+            \(String(repeating: "    ", count: indentation))enum \(page.name.capitalized) {
+            \(buildPathFunc(for: page.path, at: indentation + 1))
+            \(buildRenderFunc(for: page, at: indentation + 1))
+            \(buildIncludeFunc(for: page))
+            \(String(repeating: "    ", count: indentation))}
+            """
+        } else if associatedTypes.isEmpty {
+            return """
+            \(String(repeating: "    ", count: indentation))struct \(page.name.capitalized)\(protocols) {
+            \(buildPathFunc(for: page.path, at: indentation + 1))
+            \(buildRenderFunc(for: page, at: indentation + 1))
+            \(buildIncludeFunc(for: page))
+            \(String(repeating: "    ", count: indentation))}
+            """
+        } else {
+            return """
+            \(String(repeating: "    ", count: indentation))struct \(page.name.capitalized)\(protocols) {
+            \(associatedTypes)\(buildPathFunc(for: page.path, at: indentation + 1))
+            \(buildRenderFunc(for: page, at: indentation + 1))
+            \(buildIncludeFunc(for: page))
+            \(String(repeating: "    ", count: indentation))}
+            """
+        }
     }
 }
 
 public extension SwiftOutputBuilder.RendererDef {
-    init?(page: PageDef, signatures: SwiftPageSignatures, fileExtension ext: String, enumName: String, at indentation: Int) {
+    init?(page: PageDef, signatures: SwiftPageSignatures, protocols: [PageProperties.ProtocolCompliance], fileExtension ext: String, enumName: String, at indentation: Int) {
         guard let contents = try? String(contentsOfFile: page.path) else { return nil }
         guard let storage = Parser.parse(html: contents) else { return nil }
         guard let fragmentName = page.name.first else { return nil }
         let fullName = page.name.reversed().joined(separator: ".")
 
-        let properties = PageProperties(name: fullName, fileExtension: ext, enumName: enumName)
+        let properties = PageProperties(name: fullName, fileExtension: ext, enumName: enumName, protocols: protocols)
 
         let generator = SwiftCodeGenerator(ast: storage, signatures: signatures, page: properties)
 

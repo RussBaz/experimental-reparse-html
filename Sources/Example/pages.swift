@@ -1,6 +1,6 @@
 //
 // ------------------------------
-// reparse version: 0.0.1
+// reparse version: 0.0.4
 // ------------------------------
 // This is an auto-generated file
 // ------------------------------
@@ -17,12 +17,10 @@ enum Pages {
                 /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/Components/world.html
                 """
             }
-
             static func render(req: Request) -> String {
                 include(req: req).render()
             }
-
-            static func include(req _: Request) -> SwiftLineStorage {
+            static func include(req: Request) -> SwiftLineStorage {
                 let lines = SwiftLineStorage()
                 lines.append("""
                 <span>
@@ -47,26 +45,24 @@ enum Pages {
             /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/index.html
             """
         }
-
         static func render(req: Request, superheroes names: [String]? = nil, value: Bool? = nil) -> String {
             include(req: req, superheroes: names, value: value).render()
         }
-
         static func include(req: Request, superheroes names: [String]? = nil, value: Bool? = nil) -> SwiftLineStorage {
             let lines = SwiftLineStorage()
             var previousUnnamedIfTaken = false
-
+            
             lines.extend(Pages.Base.include(req: req))
             lines.extend(Pages.Body.include(req: req, value: value))
             lines.append("""
             <main>
             <h1>
-                Hello
+                    Hello
             """)
             if !(names?.isEmpty ?? true) {
                 lines.include(Pages.Components.World.include(req: req)) { lines in
                     lines.append("""
-                          Ultra Heroes!
+                                Ultra Heroes!
                     """)
                 }
                 previousUnnamedIfTaken = true
@@ -90,7 +86,7 @@ enum Pages {
                     lines.append("""
                     <li>
                     <p>
-                            Hi, 
+                                    Hi, 
                     """)
                     lines.append("\(item)")
                     lines.append("""
@@ -98,9 +94,9 @@ enum Pages {
                     """)
                     lines.append("\(index)")
                     lines.append("""
-                    ] or +1 = 
+                    ] or +1 =
                     """)
-                    lines.append("\(index + 1)")
+                    lines.append("\(index+1)")
                     lines.append("""
                     </p>
                     </li>
@@ -143,12 +139,10 @@ enum Pages {
             /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/base.html
             """
         }
-
         static func render(req: Request) -> String {
             include(req: req).render()
         }
-
-        static func include(req _: Request) -> SwiftLineStorage {
+        static func include(req: Request) -> SwiftLineStorage {
             let lines = SwiftLineStorage()
             lines.append("""
             <!DOCTYPE html>
@@ -175,17 +169,15 @@ enum Pages {
             /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/body.html
             """
         }
-
         static func render(req: Request, value: Bool? = nil) -> String {
             include(req: req, value: value).render()
         }
-
-        static func include(req _: Request, value: Bool? = nil) -> SwiftLineStorage {
+        static func include(req: Request, value: Bool? = nil) -> SwiftLineStorage {
             let value = value ?? false
             let lines = SwiftLineStorage()
             var attributes: SwiftAttributeStorage
             var previousUnnamedIfTaken = false
-
+            
             attributes = SwiftAttributeStorage.from(attributes: [:])
             if value {
                 attributes.update(key: "class", with: .string("blue"), replacing: false)

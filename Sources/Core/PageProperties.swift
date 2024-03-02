@@ -3,6 +3,11 @@ public final class PageProperties {
         case text(String)
         case deferred(() -> [String])
     }
+    
+    public enum ProtocolCompliance {
+        case simple(name: String)
+        case generic(name: String, associatedTypes: [(name: String, type: String)])
+    }
 
     struct LineDef {
         let indentation: Int
@@ -16,11 +21,13 @@ public final class PageProperties {
     var conditionTags: [String] = []
     var defaultValues: [String: String] = [:]
     var modifiersPresent = false
+    var protocols: [ProtocolCompliance] = []
 
-    init(name: String, fileExtension: String, enumName: String) {
+    init(name: String, fileExtension: String, enumName: String, protocols: [ProtocolCompliance]) {
         self.name = name
         self.fileExtension = fileExtension
         self.enumName = enumName
+        self.protocols = protocols
     }
 
     func clear() {
@@ -89,6 +96,123 @@ public final class PageProperties {
             }
         }
 
+        return result
+    }
+}
+
+extension PageProperties.ProtocolCompliance {
+    var asDeclaration: String {
+        switch self {
+        case .simple(let name):
+            name
+        case .generic(let name, _):
+            name
+        }
+    }
+    
+    var asAssociatedType: [String] {
+        switch self {
+        case .simple:
+            return []
+        case .generic(_, let associatedTypes):
+            var result: [String] = []
+            for (name, type) in associatedTypes {
+                result.append("typealias \(name) = \(type)")
+            }
+            
+            return result
+        }
+    }
+}
+
+extension PageProperties.ProtocolCompliance: LosslessStringConvertible {
+    private enum ParseState {
+        case parsingProtocolName
+        case parsingAssociatedName
+        case parsingAssociatedType
+    }
+    
+    public init?(_ description: String) {
+        guard !description.isEmpty else { return nil }
+        
+        var protocolName = ""
+        var associatedTypes: [(name: String, type: String)] = []
+        
+        var currentAssosiatedName = ""
+        var currentAssociatedType = ""
+        
+        var state: ParseState = .parsingProtocolName
+        
+        for c in description {
+            switch state {
+            case .parsingProtocolName:
+                if c == ":" {
+                    guard !protocolName.isEmpty else { return nil }
+                    state = .parsingAssociatedName
+                } else if c.isLetter {
+                    protocolName.append(c)
+                } else if c.isNumber, !protocolName.isEmpty {
+                    protocolName.append(c)
+                } else {
+                    return nil
+                }
+            case .parsingAssociatedName:
+                if c == ":" {
+                    guard !currentAssosiatedName.isEmpty else { return nil }
+                    state = .parsingAssociatedType
+                } else if c.isLetter {
+                    currentAssosiatedName.append(c)
+                } else if c.isNumber, !currentAssosiatedName.isEmpty {
+                    currentAssosiatedName.append(c)
+                } else {
+                    return nil
+                }
+            case .parsingAssociatedType:
+                if c == ":" {
+                    guard !currentAssociatedType.isEmpty else { return nil }
+                    associatedTypes.append((name: currentAssosiatedName, type: currentAssosiatedName))
+                    currentAssosiatedName = ""
+                    currentAssociatedType = ""
+                    state = .parsingAssociatedName
+                } else if c.isLetter {
+                    currentAssociatedType.append(c)
+                } else if c.isNumber, !currentAssociatedType.isEmpty {
+                    currentAssociatedType.append(c)
+                } else {
+                    return nil
+                }
+            }
+        }
+        
+        guard !protocolName.isEmpty else { return nil }
+        
+        guard state != .parsingAssociatedName else { return nil }
+        
+        if case .parsingAssociatedType = state {
+            guard !currentAssociatedType.isEmpty else { return nil }
+            associatedTypes.append((name: currentAssosiatedName, type: currentAssociatedType))
+        }
+        
+        if associatedTypes.isEmpty {
+            self = .simple(name: protocolName)
+        } else {
+            self = .generic(name: protocolName, associatedTypes: associatedTypes)
+        }
+    }
+    
+    public var description: String {
+        var result: String
+        
+        switch self {
+        case .simple(let name):
+            result = name
+        case .generic(let name, let associatedTypes):
+            result = name
+            for (name, type) in associatedTypes {
+                result.append(":\(name):\(type)")
+            }
+        }
+        
         return result
     }
 }
