@@ -94,6 +94,7 @@ struct ReparsePlugin: CommandPlugin {
 
         var imports: [String] = []
         var parameters: [String] = []
+        let protocols = argExtractor.extractOption(named: "protocols")
 
         switch preset {
         case .vapor:
@@ -138,6 +139,11 @@ struct ReparsePlugin: CommandPlugin {
 
         for p in parameters {
             args.append("--parameters")
+            args.append(p)
+        }
+
+        for p in protocols {
+            args.append("--protocols")
             args.append(p)
         }
 

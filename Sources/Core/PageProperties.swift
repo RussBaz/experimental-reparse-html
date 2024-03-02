@@ -3,7 +3,7 @@ public final class PageProperties {
         case text(String)
         case deferred(() -> [String])
     }
-    
+
     public enum ProtocolCompliance {
         case simple(name: String)
         case generic(name: String, associatedTypes: [(name: String, type: String)])
@@ -103,23 +103,23 @@ public final class PageProperties {
 extension PageProperties.ProtocolCompliance {
     var asDeclaration: String {
         switch self {
-        case .simple(let name):
+        case let .simple(name):
             name
-        case .generic(let name, _):
+        case let .generic(name, _):
             name
         }
     }
-    
+
     var asAssociatedType: [String] {
         switch self {
         case .simple:
             return []
-        case .generic(_, let associatedTypes):
+        case let .generic(_, associatedTypes):
             var result: [String] = []
             for (name, type) in associatedTypes {
                 result.append("typealias \(name) = \(type)")
             }
-            
+
             return result
         }
     }
@@ -131,18 +131,18 @@ extension PageProperties.ProtocolCompliance: LosslessStringConvertible {
         case parsingAssociatedName
         case parsingAssociatedType
     }
-    
+
     public init?(_ description: String) {
         guard !description.isEmpty else { return nil }
-        
+
         var protocolName = ""
         var associatedTypes: [(name: String, type: String)] = []
-        
+
         var currentAssosiatedName = ""
         var currentAssociatedType = ""
-        
+
         var state: ParseState = .parsingProtocolName
-        
+
         for c in description {
             switch state {
             case .parsingProtocolName:
@@ -183,36 +183,36 @@ extension PageProperties.ProtocolCompliance: LosslessStringConvertible {
                 }
             }
         }
-        
+
         guard !protocolName.isEmpty else { return nil }
-        
+
         guard state != .parsingAssociatedName else { return nil }
-        
+
         if case .parsingAssociatedType = state {
             guard !currentAssociatedType.isEmpty else { return nil }
             associatedTypes.append((name: currentAssosiatedName, type: currentAssociatedType))
         }
-        
+
         if associatedTypes.isEmpty {
             self = .simple(name: protocolName)
         } else {
             self = .generic(name: protocolName, associatedTypes: associatedTypes)
         }
     }
-    
+
     public var description: String {
         var result: String
-        
+
         switch self {
-        case .simple(let name):
+        case let .simple(name):
             result = name
-        case .generic(let name, let associatedTypes):
+        case let .generic(name, associatedTypes):
             result = name
             for (name, type) in associatedTypes {
                 result.append(":\(name):\(type)")
             }
         }
-        
+
         return result
     }
 }

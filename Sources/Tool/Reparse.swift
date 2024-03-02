@@ -24,7 +24,7 @@ struct Reparse: ParsableCommand {
 
     @Option(help: "List of shared parameters (parameters to be added to every 'include' function) in a form of 'label:name:type' or 'name:type'")
     var parameters: [String] = []
-    
+
     @Option(help: "A list of protocols to apply to enums with render functions in them in a form of 'name[:associatedName:associatedType]'. Optional part can be repeated any number of times.")
     var protocols: [String] = []
 

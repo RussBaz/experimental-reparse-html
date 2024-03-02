@@ -20,11 +20,3 @@ extension SwiftLineCommand {
         }
     }
 }
-
-public protocol MySpecialProtocol {
-    associatedtype Item
-}
-
-public protocol MyProtocol {
-    
-}

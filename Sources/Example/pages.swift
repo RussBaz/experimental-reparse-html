@@ -17,10 +17,12 @@ enum Pages {
                 /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/Components/world.html
                 """
             }
+
             static func render(req: Request) -> String {
                 include(req: req).render()
             }
-            static func include(req: Request) -> SwiftLineStorage {
+
+            static func include(req _: Request) -> SwiftLineStorage {
                 let lines = SwiftLineStorage()
                 lines.append("""
                 <span>
@@ -45,13 +47,15 @@ enum Pages {
             /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/index.html
             """
         }
+
         static func render(req: Request, superheroes names: [String]? = nil, value: Bool? = nil) -> String {
             include(req: req, superheroes: names, value: value).render()
         }
+
         static func include(req: Request, superheroes names: [String]? = nil, value: Bool? = nil) -> SwiftLineStorage {
             let lines = SwiftLineStorage()
             var previousUnnamedIfTaken = false
-            
+
             lines.extend(Pages.Base.include(req: req))
             lines.extend(Pages.Body.include(req: req, value: value))
             lines.append("""
@@ -96,7 +100,7 @@ enum Pages {
                     lines.append("""
                     ] or +1 =
                     """)
-                    lines.append("\(index+1)")
+                    lines.append("\(index + 1)")
                     lines.append("""
                     </p>
                     </li>
@@ -139,10 +143,12 @@ enum Pages {
             /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/base.html
             """
         }
+
         static func render(req: Request) -> String {
             include(req: req).render()
         }
-        static func include(req: Request) -> SwiftLineStorage {
+
+        static func include(req _: Request) -> SwiftLineStorage {
             let lines = SwiftLineStorage()
             lines.append("""
             <!DOCTYPE html>
@@ -169,15 +175,17 @@ enum Pages {
             /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/body.html
             """
         }
+
         static func render(req: Request, value: Bool? = nil) -> String {
             include(req: req, value: value).render()
         }
-        static func include(req: Request, value: Bool? = nil) -> SwiftLineStorage {
+
+        static func include(req _: Request, value: Bool? = nil) -> SwiftLineStorage {
             let value = value ?? false
             let lines = SwiftLineStorage()
             var attributes: SwiftAttributeStorage
             var previousUnnamedIfTaken = false
-            
+
             attributes = SwiftAttributeStorage.from(attributes: [:])
             if value {
                 attributes.update(key: "class", with: .string("blue"), replacing: false)

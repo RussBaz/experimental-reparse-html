@@ -131,18 +131,16 @@ public final class SwiftOutputBuilder {
     }
 
     func buildPageEnum(for page: RendererDef, at indentation: Int = 0) -> String {
-        let protocols: String = if page.properties.protocols.isEmpty { "" } else { ": \(page.properties.protocols.map({ $0.asDeclaration }).joined(separator: ", "))" }
-        let associatedTypes: String
-        
-        if page.properties.protocols.isEmpty {
-            associatedTypes = ""
+        let protocols = if page.properties.protocols.isEmpty { "" } else { ": \(page.properties.protocols.map(\.asDeclaration).joined(separator: ", "))" }
+        let associatedTypes: String = if page.properties.protocols.isEmpty {
+            ""
         } else {
-            associatedTypes = page.properties.protocols
-                .flatMap({ $0.asAssociatedType })
-                .map({ "\(String(repeating: "    ", count: indentation+1))\($0)" })
+            page.properties.protocols
+                .flatMap(\.asAssociatedType)
+                .map { "\(String(repeating: "    ", count: indentation + 1))\($0)" }
                 .joined(separator: "\n") + "\n\n"
         }
-        
+
         if protocols.isEmpty {
             return """
             \(String(repeating: "    ", count: indentation))enum \(page.name.capitalized) {
