@@ -10,18 +10,15 @@ let package = Package(
     ],
     products: [
         .executable(name: "reparse", targets: ["reparse"]),
-        .library(name: "ReparseRuntime", targets: ["ReparseRuntime"])
+        .library(name: "ReparseRuntime", targets: ["ReparseRuntime"]),
+        .plugin(name: "ReparsePlugin", targets: ["ReparsePlugin"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
-        // 💧 A server-side Swift web framework.
         .package(url: "https://github.com/vapor/vapor.git", from: "4.92.4"),
-        // 🍃 An expressive, performant, and extensible templating language built for Swift.
         .package(url: "https://github.com/vapor/leaf.git", from: "4.3.0"),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
         .executableTarget(
             name: "ReparseExample",
             dependencies: [
@@ -32,14 +29,30 @@ let package = Package(
             path: "./Sources/Example"
         ),
         .target(name: "ReparseRuntime", path: "./Sources/Runtime"),
-        .target(name: "ReparseCore", path: "./Sources/Core"),
+        .target(
+            name: "ReparseCore", dependencies: [
+                .target(name: "ReparseRuntime"),
+            ],
+            path: "./Sources/Core"
+        ),
         .executableTarget(
             name: "reparse",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .target(name: "ReparseCore"),
-                .target(name: "ReparseRuntime"),
             ], path: "./Sources/Tool"
+        ),
+        .plugin(
+            name: "ReparsePlugin",
+            capability: .command(
+                intent: .custom(verb: "reparse", description: "This command will compile the html templates into the source code."),
+                permissions: [
+                    .writeToPackageDirectory(reason: "This command (re)compiles the html templates."),
+                ]
+            ),
+            dependencies: [
+                .target(name: "reparse"),
+            ]
         ),
         .testTarget(name: "ExampleTests", dependencies: [
             .target(name: "ReparseExample"),
