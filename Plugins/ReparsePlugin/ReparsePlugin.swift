@@ -41,18 +41,18 @@ struct ReparsePlugin: CommandPlugin {
 
         let targetPath: Path = if let providedTarget {
             if let target = try? context.package.targets(named: [providedTarget]).first {
-                target.directory
+                target.sourceModule?.directory ?? context.package.directory
             } else {
                 switch preset {
                 case .vapor:
                     if let target = try? context.package.targets(named: ["App"]).first {
-                        target.directory
+                        target.sourceModule?.directory ?? context.package.directory
                     } else {
                         context.package.directory
                     }
                 case .vaporHX:
                     if let target = try? context.package.targets(named: ["App"]).first {
-                        target.directory
+                        target.sourceModule?.directory ?? context.package.directory
                     } else {
                         context.package.directory
                     }
@@ -64,13 +64,13 @@ struct ReparsePlugin: CommandPlugin {
             switch preset {
             case .vapor:
                 if let target = try? context.package.targets(named: ["App"]).first {
-                    target.directory
+                    target.sourceModule?.directory ?? context.package.directory
                 } else {
                     context.package.directory
                 }
             case .vaporHX:
                 if let target = try? context.package.targets(named: ["App"]).first {
-                    target.directory
+                    target.sourceModule?.directory ?? context.package.directory
                 } else {
                     context.package.directory
                 }
@@ -85,7 +85,7 @@ struct ReparsePlugin: CommandPlugin {
             providedSource
         }
 
-        let location = context.pluginWorkDirectory.appending(sourceLocation)
+        let location = context.package.directory.appending(sourceLocation)
         let destination = targetPath.appending(destinationLocation)
 
         let fileName = argExtractor.extractOption(named: "fileName").first
