@@ -107,8 +107,8 @@ struct ReparsePlugin: CommandPlugin {
             imports.append("VHX")
             imports.append(contentsOf: providedImports)
             parameters.append("req:Request")
-            parameters.append("context:Context")
             parameters.append("isPage:Bool")
+            parameters.append("?context:EmptyContext")
             parameters.append(contentsOf: providedParameters)
         case .none:
             imports.append(contentsOf: providedImports)

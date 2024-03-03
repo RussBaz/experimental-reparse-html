@@ -302,7 +302,7 @@ public final class SwiftCodeGenerator {
                 properties.append("// Error: Impossible tag type", at: indentation)
             }
         case let .requirement(name, type, label, value):
-            signatures.append(parameter: .init(type: "\(type)?", name: name, label: label), to: properties.name)
+            signatures.append(parameter: .init(type: "\(type)?", name: name, label: label, canBeOverriden: false), to: properties.name)
             if let value {
                 properties.appendDefault(name: name, value: value)
             }

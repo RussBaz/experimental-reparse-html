@@ -99,3 +99,5 @@ public final class SwiftSlotStorage {
         }
     }
 }
+
+public struct EmptyContext {}

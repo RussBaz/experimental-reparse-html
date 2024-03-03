@@ -1,17 +1,17 @@
-<r-require name="names" type="[String]" label="superheroes" />
+<r-require name="context" type="[String]" label="superheroes" />
 <r-extend name="base" />
 <r-extend name="body" />
 
 <main>
     <h1>
         Hello
-        <r-include name="components.world" r-if="!(names?.isEmpty ?? true)">
+        <r-include name="components.world" r-if="!(context?.isEmpty ?? true)">
             Ultra Heroes!
         </r-include>
         <r-block r-else> World?</r-block>
     </h1>
     <ol>
-        <li r-for-every="names">
+        <li r-for-every="context">
             <p>
                 <r-include name="components.hello-me"><r-item /></r-include>
             </p>

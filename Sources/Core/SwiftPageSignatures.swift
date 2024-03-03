@@ -3,6 +3,7 @@ public final class SwiftPageSignatures {
         let type: String
         let name: String
         let label: String?
+        let canBeOverriden: Bool
     }
 
     public struct PageSignature {
@@ -26,7 +27,15 @@ public final class SwiftPageSignatures {
     func append(parameter: ParameterDef, to name: String) {
         if let signature = signatures[name] {
             var newParameters = signature.parameters
-            newParameters.append(parameter)
+            if let i = newParameters.firstIndex(where: { $0.name == parameter.name }) {
+                let p = newParameters[i]
+                if p.canBeOverriden {
+                    newParameters[i] = parameter
+                }
+            } else {
+                newParameters.append(parameter)
+            }
+
             signatures[name] = .init(parameters: newParameters, includes: signature.includes)
         } else {
             signatures[name] = .init(parameters: [parameter], includes: [])
@@ -92,6 +101,8 @@ extension SwiftPageSignatures {
             // I originaly planned to throw an appropriate exception on a parse failure
             // but I realised that I could not think of a good way of recovering from those exceptions
             // So I decided to go with skip on error for now and deal with this later if the need ever arises
+
+            // Break on circular references
             guard !currentSearch.contains(name) else { return }
             currentSearch.append(name)
 
@@ -104,13 +115,12 @@ extension SwiftPageSignatures {
                     guard let s = input.signatures[i] else { continue }
                     parseSignature(s, with: i)
                     guard let cached = resolved[i] else { continue }
+
                     for c in cached {
                         let r = buffer.filter { $0.name == c.name }
 
                         if r.isEmpty {
                             buffer.append(c)
-                        } else if r.count == 1, let item = r.first {
-                            guard c == item else { continue }
                         } else {
                             buffer.removeAll(where: { $0.name == c.name })
                             buffer.append(c)
@@ -151,7 +161,18 @@ extension SwiftPageSignatures.ParameterDef {
 extension SwiftPageSignatures.ParameterDef: Equatable {}
 extension SwiftPageSignatures.ParameterDef: LosslessStringConvertible {
     public init?(_ description: String) {
-        let input = description.split(separator: ":")
+        let checkedDescription: String
+
+        if description.starts(with: "?") {
+            canBeOverriden = true
+            checkedDescription = String(description.dropFirst())
+        } else {
+            canBeOverriden = false
+            checkedDescription = description
+        }
+
+        let input = checkedDescription.split(separator: ":")
+
         if input.count == 2 {
             let inputName = String(input[0].trimmingCharacters(in: .whitespacesAndNewlines))
             let inputType = String(input[1].trimmingCharacters(in: .whitespacesAndNewlines))
