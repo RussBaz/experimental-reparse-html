@@ -104,9 +104,11 @@ struct ReparsePlugin: CommandPlugin {
             parameters.append(contentsOf: providedParameters)
         case .vaporHX:
             imports.append("Vapor")
-            imports.append("VaporHX")
+            imports.append("VHX")
             imports.append(contentsOf: providedImports)
             parameters.append("req:Request")
+            parameters.append("context:Context")
+            parameters.append("isPage:Bool")
             parameters.append(contentsOf: providedParameters)
         case .none:
             imports.append(contentsOf: providedImports)

@@ -54,13 +54,19 @@ let package = Package(
                 .target(name: "reparse"),
             ]
         ),
-        .testTarget(name: "ExampleTests", dependencies: [
-            .target(name: "ReparseExample"),
-            .product(name: "XCTVapor", package: "vapor"),
+        .testTarget(
+            name: "ExampleTests",
+            dependencies: [
+                .target(name: "ReparseExample"),
+                .product(name: "XCTVapor", package: "vapor"),
 
-            // Workaround for https://github.com/apple/swift-package-manager/issues/6940
-            .product(name: "Vapor", package: "vapor"),
-            .product(name: "Leaf", package: "leaf"),
-        ]),
+                // Workaround for https://github.com/apple/swift-package-manager/issues/6940
+                .product(name: "Vapor", package: "vapor"),
+                .product(name: "Leaf", package: "leaf"),
+            ],
+            resources: [
+                .copy("Views"),
+            ]
+        ),
     ]
 )

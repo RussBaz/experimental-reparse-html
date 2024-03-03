@@ -85,6 +85,8 @@ enum Pages {
             lines.extend(Pages.Base.include(req: req))
             lines.extend(Pages.Body.include(req: req, value: value))
             lines.append("""
+
+
             <main>
                 <h1>
                     Hello
@@ -93,6 +95,7 @@ enum Pages {
             if !(names?.isEmpty ?? true) {
                 lines.include(Pages.Components.World.include(req: req)) { lines in
                     lines.append("""
+
                                 Ultra Heroes!
 
                     """)
@@ -110,6 +113,7 @@ enum Pages {
                 previousUnnamedIfTaken = false
             }
             lines.append("""
+
                 </h1>
                 <ol>
 
@@ -125,6 +129,7 @@ enum Pages {
                         lines.append("\(item)")
                     }
                     lines.append("""
+
                                 </p>
                                 <p>
                                     Index: 
@@ -135,6 +140,7 @@ enum Pages {
                     """)
                     lines.append("\(index + 1)")
                     lines.append("""
+
                                 </p>
                             </li>
                     """)
@@ -152,7 +158,9 @@ enum Pages {
                 previousUnnamedIfTaken = false
             }
             lines.append("""
+
                 </ol>
+
                 <p>
             """)
             lines.append("\(req.url.string)")
@@ -192,11 +200,14 @@ enum Pages {
             """)
             lines.declare(slot: "head")
             lines.append("""
+
                 </head>
+
 
             """)
             lines.declare(slot: "default")
             lines.append("""
+
             </html>
             """)
 
@@ -237,6 +248,7 @@ enum Pages {
             lines.append("<body\(attributes)>")
             lines.declare(slot: "default")
             lines.append("""
+
             </body>
             """)
 

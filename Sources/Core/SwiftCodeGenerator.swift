@@ -84,9 +84,7 @@ public final class SwiftCodeGenerator {
 
             for l in contents.lines {
                 if l == "\n" {
-                    if !buffer.isEmpty {
-                        properties.append(buffer, at: indentation)
-                    }
+                    properties.append(buffer, at: indentation)
                     buffer = ""
                 } else {
                     buffer += l
@@ -208,6 +206,7 @@ public final class SwiftCodeGenerator {
             properties.append("}", at: indentation)
         case let .loop(forEvery, name, contents):
             guard !contents.isEmpty else { return }
+
             let name = name ?? "previousUnnamedIfTaken"
             properties.append(condition: name)
             let innerGenerator = SwiftCodeGenerator(ast: contents, signatures: signatures, page: properties)

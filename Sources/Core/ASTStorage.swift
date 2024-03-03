@@ -71,30 +71,6 @@ public final class ASTStorage {
         values.popLast()
     }
 
-    func popOutOfOrderNodes() -> [AST] {
-        guard !values.isEmpty else { return [] }
-        var canExtend = true
-        var result: [AST] = []
-
-        for (pos, item) in values.enumerated() {
-            if case .extend = item {
-                if canExtend {
-                    result.append(item)
-                }
-                values[pos] = .noop
-            } else if item.isEmptyConstant {
-                values[pos] = .noop
-            } else if case .requirement = item {
-                result.append(item)
-                values[pos] = .noop
-            } else if canExtend {
-                canExtend = false
-            }
-        }
-
-        return []
-    }
-
     var isEmpty: Bool {
         values.isEmpty || values.count == 1 && values[0] == .endOfBranch
     }
