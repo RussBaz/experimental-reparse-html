@@ -91,11 +91,13 @@ public final class SwiftLineStorage {
 
     func resolve(_ slots: SwiftSlotStorage) -> [SwiftLineCommand] {
         slots.resolve()
-        resolveExtends()
         var lines = resolveOuterSlots(commands: contents, slots: slots)
         lines = resolveInnerSlots(commands: lines, slots: slots)
         lines = resolveIncludes(commands: lines, slots: slots)
 
+        if case let .extending(_, templates) = type {
+            lines = resolveExtends(contents: lines, templates: templates, slots: slots)
+        }
         return lines
     }
 
@@ -261,28 +263,19 @@ public final class SwiftLineStorage {
         return result
     }
 
-    func resolveExtends() {
-        switch type {
-        case .empty:
-            type = .normal(contents: [])
-        case .normal:
-            ()
-        case let .extending(contents, templates):
-            var result: [SwiftLineCommand] = []
+    func resolveExtends(contents: [SwiftLineCommand], templates: [SwiftLineStorage], slots: SwiftSlotStorage) -> [SwiftLineCommand] {
+        guard !templates.isEmpty else { return contents }
+        var defaultSlot = contents
+        var slot = slots.innerSlots
+        slot.unnamed = defaultSlot
 
-            for template in templates {
-                result.append(.startIncludeWithDefaults(storage: template))
-            }
-
-            if !contents.isEmpty {
-                result.append(contentsOf: contents)
-            }
-
-            for _ in 0 ..< templates.count {
-                result.append(.endIncludeWithDefaults)
-            }
-            type = .normal(contents: result)
+        for template in templates.reversed() {
+            defaultSlot = template.resolve(slot)
+            slot = slot.innerSlots
+            slot.unnamed = defaultSlot
         }
+
+        return defaultSlot
     }
 
     var contents: [SwiftLineCommand] {

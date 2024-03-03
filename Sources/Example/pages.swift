@@ -86,10 +86,21 @@ enum Pages {
             lines.extend(Pages.Body.include(req: req, value: value))
             lines.append("""
             <main>
-              <h1>
-                Hello
+                <h1>
+                    Hello
 
             """)
+            if !(names?.isEmpty ?? true) {
+                lines.include(Pages.Components.World.include(req: req)) { lines in
+                    lines.append("""
+                                Ultra Heroes!
+
+                    """)
+                }
+                previousUnnamedIfTaken = true
+            } else {
+                previousUnnamedIfTaken = false
+            }
             if !previousUnnamedIfTaken {
                 lines.append("""
                  World?
@@ -99,30 +110,33 @@ enum Pages {
                 previousUnnamedIfTaken = false
             }
             lines.append("""
-              </h1>
-              <ol>
+                </h1>
+                <ol>
 
             """)
             if let names {
                 for (index, item) in names.enumerated() {
                     lines.append("""
                     <li>
-                          <p>
-                            Hi, 
+                                <p>
+
                     """)
-                    lines.append("\(item)")
+                    lines.include(Pages.Components.HelloMe.include(req: req)) { lines in
+                        lines.append("\(item)")
+                    }
                     lines.append("""
-                     [index: 
+                                </p>
+                                <p>
+                                    Index: 
                     """)
                     lines.append("\(index)")
                     lines.append("""
-                    ] or +1 =
-
+                     or +1 = 
                     """)
                     lines.append("\(index + 1)")
                     lines.append("""
-                          </p>
-                        </li>
+                                </p>
+                            </li>
                     """)
                 }
                 previousUnnamedIfTaken = if names.isEmpty { false } else { true }
@@ -138,8 +152,8 @@ enum Pages {
                 previousUnnamedIfTaken = false
             }
             lines.append("""
-              </ol>
-              <p>
+                </ol>
+                <p>
             """)
             lines.append("\(req.url.string)")
             lines.append("""

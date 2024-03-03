@@ -13,8 +13,10 @@
     <ol>
         <li r-for-every="names">
             <p>
-                Hi, <r-item /> [index: <r-index />] or +1 =
-                <r-eval line="index+1" />
+                <r-include name="components.hello-me"><r-item /></r-include>
+            </p>
+            <p>
+                Index: <r-index /> or +1 = <r-eval line="index+1" />
             </p>
         </li>
         <li r-else>No more heroes...</li>
