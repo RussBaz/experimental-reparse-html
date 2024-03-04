@@ -23,6 +23,7 @@ struct ReparsePlugin: CommandPlugin {
 
         let providedImports = argExtractor.extractOption(named: "imports")
         let providedParameters = argExtractor.extractOption(named: "parameters")
+        let providedProtocols = argExtractor.extractOption(named: "protocols")
 
         let preset: Preset = if providedPreset == "vapor" { .vapor } else if providedPreset == "vaporhx" { .vaporHX } else { .none }
 
@@ -94,7 +95,7 @@ struct ReparsePlugin: CommandPlugin {
 
         var imports: [String] = []
         var parameters: [String] = []
-        let protocols = argExtractor.extractOption(named: "protocols")
+        var protocols: [String] = []
 
         switch preset {
         case .vapor:
@@ -102,6 +103,7 @@ struct ReparsePlugin: CommandPlugin {
             imports.append(contentsOf: providedImports)
             parameters.append("req:Request")
             parameters.append(contentsOf: providedParameters)
+            protocols.append(contentsOf: providedProtocols)
         case .vaporHX:
             imports.append("Vapor")
             imports.append("VHX")
@@ -110,9 +112,12 @@ struct ReparsePlugin: CommandPlugin {
             parameters.append("isPage:Bool")
             parameters.append("?context:EmptyContext=EmptyContext()")
             parameters.append(contentsOf: providedParameters)
+            protocols.append("HXTemplateable")
+            protocols.append(contentsOf: providedProtocols)
         case .none:
             imports.append(contentsOf: providedImports)
             parameters.append(contentsOf: providedParameters)
+            protocols.append(contentsOf: providedProtocols)
         }
 
         let dryRun = argExtractor.extractFlag(named: "dryRun") > 0
