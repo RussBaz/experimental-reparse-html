@@ -27,7 +27,7 @@ public final class SwiftCodeGenerator {
 
     func generateHeader(at indentation: Int) {
         properties.append(at: indentation) {
-            let signature = self.signatures.parameters(of: self.properties.name).map(\.asDeclaration).joined(separator: ", ")
+            let signature = self.signatures.declaration(of: self.properties.name)
             return ["static func include(\(signature)) -> SwiftLineStorage {"]
         }
         properties.append(at: indentation + 1) {
@@ -127,14 +127,14 @@ public final class SwiftCodeGenerator {
                 signatures.append(include: name, to: properties.name)
                 if contents.isEmpty {
                     properties.append(at: indentation) {
-                        let signature = self.signatures.parameters(of: name).map(\.asParameter).joined(separator: ", ")
+                        let signature = self.signatures.parameters(of: name, in: self.properties.name)
                         return ["lines.include(\(self.properties.enumName).\(name).include(\(signature)))"]
                     }
                 } else {
                     let innerGenerator = SwiftCodeGenerator(ast: contents, signatures: signatures, page: properties)
 
                     properties.append(at: indentation) {
-                        let signature = self.signatures.parameters(of: name).map(\.asParameter).joined(separator: ", ")
+                        let signature = self.signatures.parameters(of: name, in: self.properties.name)
                         return ["lines.include(\(self.properties.enumName).\(name).include(\(signature))) { lines in"]
                     }
                     innerGenerator.generateBody(at: indentation + 1)
@@ -165,7 +165,7 @@ public final class SwiftCodeGenerator {
                 properties.append("\(cn) = true", at: indentation + 1)
 
                 properties.append(at: indentation + 1) {
-                    let signature = self.signatures.parameters(of: name).map(\.asParameter).joined(separator: ", ")
+                    let signature = self.signatures.parameters(of: name, in: self.properties.name)
                     return ["lines.extend(\(self.properties.enumName).\(name).include(\(signature)))"]
                 }
 
@@ -177,7 +177,7 @@ public final class SwiftCodeGenerator {
                 signatures.append(include: name, to: properties.name)
 
                 properties.append(at: indentation) {
-                    let signature = self.signatures.parameters(of: name).map(\.asParameter).joined(separator: ", ")
+                    let signature = self.signatures.parameters(of: name, in: self.properties.name)
 
                     return ["lines.extend(\(self.properties.enumName).\(name).include(\(signature)))"]
                 }
@@ -302,7 +302,7 @@ public final class SwiftCodeGenerator {
                 properties.append("// Error: Impossible tag type", at: indentation)
             }
         case let .requirement(name, type, label, value):
-            signatures.append(parameter: .init(type: "\(type)?", name: name, label: label, canBeOverriden: false), to: properties.name)
+            signatures.append(parameter: .init(type: "\(type)?", name: name, label: label, defaultValue: "nil", canBeOverriden: false), to: properties.name)
             if let value {
                 properties.appendDefault(name: name, value: value)
             }

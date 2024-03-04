@@ -3,19 +3,21 @@ public final class SwiftPageSignatures {
         let type: String
         let name: String
         let label: String?
+        let defaultValue: String?
         let canBeOverriden: Bool
     }
 
     public struct PageSignature {
         let parameters: [ParameterDef]
+        let required: [ParameterDef]
         let includes: [String]
     }
 
     var signatures = [String: PageSignature]()
-    private var ressolved: [String: [ParameterDef]] = [:]
+    private var resolved: [String: [ParameterDef]] = [:]
 
     func parameters(of name: String) -> [ParameterDef] {
-        if let parameters = ressolved[name] {
+        if let parameters = resolved[name] {
             parameters
         } else if let parameters = signatures[name] {
             parameters.parameters
@@ -24,21 +26,42 @@ public final class SwiftPageSignatures {
         }
     }
 
+    func declaration(of name: String) -> String {
+        parameters(of: name).map(\.asDeclaration).joined(separator: ", ")
+    }
+
+    func parameters(of name: String, in template: String) -> String {
+        let innerParams = parameters(of: name)
+        let outerParams = parameters(of: template)
+
+        var result: [String] = []
+
+        for param in innerParams {
+            let outer = outerParams.first(where: { $0.name == param.name })
+            param.asParameter(outerType: outer?.type).map { result.append($0) }
+        }
+
+        return result.joined(separator: ", ")
+    }
+
     func append(parameter: ParameterDef, to name: String) {
         if let signature = signatures[name] {
             var newParameters = signature.parameters
-            if let i = newParameters.firstIndex(where: { $0.name == parameter.name }) {
-                let p = newParameters[i]
-                if p.canBeOverriden {
-                    newParameters[i] = parameter
-                }
+            var newRequiredParameters = signature.required
+
+            if parameter.canBeOverriden {
+                newRequiredParameters.append(parameter)
             } else {
                 newParameters.append(parameter)
             }
 
-            signatures[name] = .init(parameters: newParameters, includes: signature.includes)
+            signatures[name] = .init(parameters: newParameters, required: newRequiredParameters, includes: signature.includes)
         } else {
-            signatures[name] = .init(parameters: [parameter], includes: [])
+            if parameter.canBeOverriden {
+                signatures[name] = .init(parameters: [], required: [parameter], includes: [])
+            } else {
+                signatures[name] = .init(parameters: [parameter], required: [], includes: [])
+            }
         }
     }
 
@@ -46,9 +69,9 @@ public final class SwiftPageSignatures {
         if let signature = signatures[name] {
             var newIncludes = signature.includes
             newIncludes.append(include)
-            signatures[name] = .init(parameters: signature.parameters, includes: newIncludes)
+            signatures[name] = .init(parameters: signature.parameters, required: signature.required, includes: newIncludes)
         } else {
-            signatures[name] = .init(parameters: [], includes: [include])
+            signatures[name] = .init(parameters: [], required: [], includes: [include])
         }
     }
 
@@ -94,7 +117,19 @@ extension SwiftPageSignatures {
                 parseSignature(value, with: key)
             }
 
-            input.ressolved = resolved
+            for (key, value) in input.signatures {
+                guard var result = resolved[key] else { continue }
+
+                for p in value.required {
+                    if !result.contains(where: { $0.name == p.name }) {
+                        result.append(p)
+                    }
+                }
+
+                resolved[key] = result
+            }
+
+            input.resolved = resolved
         }
 
         func parseSignature(_ signature: PageSignature, with name: String) {
@@ -142,18 +177,18 @@ extension SwiftPageSignatures {
 extension SwiftPageSignatures.ParameterDef {
     var asDeclaration: String {
         let label = if let label { "\(label) " } else { "" }
-        if type.hasSuffix("?") {
-            return "\(label)\(name): \(type) = nil"
-        } else {
-            return "\(label)\(name): \(type)"
-        }
+        let d = if let defaultValue { " = \(defaultValue)" } else { "" }
+
+        return "\(label)\(name): \(type)\(d)"
     }
 
-    var asParameter: String {
+    func asParameter(outerType: String?) -> String? {
+        guard let outerType, outerType == type else { return nil }
+
         if let label {
-            "\(label): \(name)"
+            return "\(label): \(name)"
         } else {
-            "\(name): \(name)"
+            return "\(name): \(name)"
         }
     }
 }
@@ -175,33 +210,62 @@ extension SwiftPageSignatures.ParameterDef: LosslessStringConvertible {
 
         if input.count == 2 {
             let inputName = String(input[0].trimmingCharacters(in: .whitespacesAndNewlines))
-            let inputType = String(input[1].trimmingCharacters(in: .whitespacesAndNewlines))
 
-            guard !inputName.isEmpty, !inputType.isEmpty else { return nil }
+            guard !inputName.isEmpty else { return nil }
+
+            let splitType = input[1].split(separator: "=")
+
+            guard !splitType.isEmpty, splitType.count < 3 else { return nil }
+
+            let inputType = String(splitType[0].trimmingCharacters(in: .whitespacesAndNewlines))
+
+            let inputDefaultValue: String? = if splitType.count == 1 {
+                nil
+            } else {
+                String(splitType[1].trimmingCharacters(in: .whitespacesAndNewlines))
+            }
+
+            guard !inputType.isEmpty else { return nil }
 
             label = nil
             name = inputName
             type = inputType
+            defaultValue = inputDefaultValue
         } else if input.count == 3 {
             let inputLabel = String(input[0].trimmingCharacters(in: .whitespacesAndNewlines))
             let inputName = String(input[1].trimmingCharacters(in: .whitespacesAndNewlines))
-            let inputType = String(input[2].trimmingCharacters(in: .whitespacesAndNewlines))
 
-            guard !inputName.isEmpty, !inputType.isEmpty else { return nil }
+            guard !inputName.isEmpty else { return nil }
+
+            let splitType = input[2].split(separator: "=")
+
+            guard !splitType.isEmpty, splitType.count < 3 else { return nil }
+
+            let inputType = String(splitType[0].trimmingCharacters(in: .whitespacesAndNewlines))
+
+            let inputDefaultValue: String? = if splitType.count == 1 {
+                nil
+            } else {
+                String(splitType[1].trimmingCharacters(in: .whitespacesAndNewlines))
+            }
+
+            guard !inputType.isEmpty else { return nil }
 
             label = if inputLabel.isEmpty { nil } else { inputLabel }
             name = inputName
             type = inputType
+            defaultValue = inputDefaultValue
         } else {
             return nil
         }
     }
 
     public var description: String {
-        if let label {
-            "\(label):\(name):\(type)"
+        let d = if let defaultValue { "=\(defaultValue)" } else { "" }
+        return if let label {
+            "\(label):\(name):\(type)\(d)"
         } else {
-            ":\(name):\(type)"
+            ":\(name):\(type)\(d)"
         }
     }
 }

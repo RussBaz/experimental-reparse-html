@@ -74,11 +74,11 @@ enum Pages {
             """
         }
 
-        static func render(req: Request, superheroes names: [String]? = nil, value: Bool? = nil) -> String {
-            include(req: req, superheroes: names, value: value).render()
+        static func render(superheroes context: [String]? = nil, value: Bool? = nil, req: Request) -> String {
+            include(superheroes: context, value: value, req: req).render()
         }
 
-        static func include(req: Request, superheroes names: [String]? = nil, value: Bool? = nil) -> SwiftLineStorage {
+        static func include(superheroes context: [String]? = nil, value: Bool? = nil, req: Request) -> SwiftLineStorage {
             let lines = SwiftLineStorage()
             var previousUnnamedIfTaken = false
 
@@ -92,7 +92,7 @@ enum Pages {
                     Hello
 
             """)
-            if !(names?.isEmpty ?? true) {
+            if !(context?.isEmpty ?? true) {
                 lines.include(Pages.Components.World.include(req: req)) { lines in
                     lines.append("""
 
@@ -118,8 +118,8 @@ enum Pages {
                 <ol>
 
             """)
-            if let names {
-                for (index, item) in names.enumerated() {
+            if let context {
+                for (index, item) in context.enumerated() {
                     lines.append("""
                     <li>
                                 <p>
@@ -145,7 +145,7 @@ enum Pages {
                             </li>
                     """)
                 }
-                previousUnnamedIfTaken = if names.isEmpty { false } else { true }
+                previousUnnamedIfTaken = if context.isEmpty { false } else { true }
             } else {
                 previousUnnamedIfTaken = false
             }

@@ -108,7 +108,7 @@ struct ReparsePlugin: CommandPlugin {
             imports.append(contentsOf: providedImports)
             parameters.append("req:Request")
             parameters.append("isPage:Bool")
-            parameters.append("?context:EmptyContext")
+            parameters.append("?context:EmptyContext=EmptyContext()")
             parameters.append(contentsOf: providedParameters)
         case .none:
             imports.append(contentsOf: providedImports)

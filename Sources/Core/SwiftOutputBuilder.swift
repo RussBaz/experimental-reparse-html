@@ -107,8 +107,8 @@ public final class SwiftOutputBuilder {
     }
 
     func buildRenderFunc(for page: RendererDef, at indentation: Int = 0) -> String {
-        let signature = signatures.parameters(of: page.properties.name).map(\.asDeclaration).joined(separator: ", ")
-        let include = signatures.parameters(of: page.properties.name).map(\.asParameter).joined(separator: ", ")
+        let signature = signatures.declaration(of: page.properties.name)
+        let include = signatures.parameters(of: page.properties.name, in: page.properties.name)
         return """
         \(String(repeating: "    ", count: indentation))static func render(\(signature)) -> String {
         \(String(repeating: "    ", count: indentation))    include(\(include)).render()
