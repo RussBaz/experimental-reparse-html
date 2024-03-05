@@ -34,7 +34,7 @@ struct ReparsePlugin: CommandPlugin {
             case .vaporHX:
                 ["Resources", "Pages"]
             case .none:
-                ["Pages"]
+                []
             }
         } else {
             providedSource
@@ -80,14 +80,8 @@ struct ReparsePlugin: CommandPlugin {
             }
         }
 
-        let destinationLocation: [String] = if providedDestination.isEmpty {
-            []
-        } else {
-            providedSource
-        }
-
         let location = context.package.directory.appending(sourceLocation)
-        let destination = targetPath.appending(destinationLocation)
+        let destination = targetPath.appending(providedDestination)
 
         let fileName = argExtractor.extractOption(named: "fileName").first
         let fileExtension = argExtractor.extractOption(named: "fileExtension").first

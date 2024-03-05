@@ -49,7 +49,7 @@ public final class SwiftOutputBuilder {
         let topLine = """
         //
         // ------------------------------
-        // reparse version: 0.0.4
+        // reparse version: 0.0.5
         // ------------------------------
         // This is an auto-generated file
         // ------------------------------

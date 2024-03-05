@@ -14,7 +14,7 @@ enum Pages {
         enum World {
             static var path: String {
                 """
-                /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/Components/world.html
+                /Users/user/Projects/GitHub/experimental-reparse-html/Resources/Pages/Components/world.html
                 """
             }
 
@@ -43,7 +43,7 @@ enum Pages {
         enum HelloMe {
             static var path: String {
                 """
-                /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/Components/hello-me.html
+                /Users/user/Projects/GitHub/experimental-reparse-html/Resources/Pages/Components/hello-me.html
                 """
             }
 
@@ -70,7 +70,7 @@ enum Pages {
     enum Index {
         static var path: String {
             """
-            /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/index.html
+            /Users/user/Projects/GitHub/experimental-reparse-html/Resources/Pages/index.html
             """
         }
 
@@ -181,7 +181,7 @@ enum Pages {
     enum Base {
         static var path: String {
             """
-            /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/base.html
+            /Users/user/Projects/GitHub/experimental-reparse-html/Resources/Pages/base.html
             """
         }
 
@@ -218,7 +218,7 @@ enum Pages {
     enum Body {
         static var path: String {
             """
-            /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/body.html
+            /Users/user/Projects/GitHub/experimental-reparse-html/Resources/Pages/body.html
             """
         }
 

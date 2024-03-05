@@ -8,11 +8,59 @@ NOTE: The master branch is way ahead of the latest release as it includes many f
 2. HTML Templating (and not a text templating)
 3. Templates are Compiled into the Swift Code
 
+## Example
+
+Here is an example of the `Reparse` syntax as used in the bundled `Example` project:
+
+```html
+<r-require name="context" type="[String]" label="superheroes" />
+<r-extend name="base" />
+<r-extend name="body" />
+
+<main>
+    <h1>
+        Hello
+        <r-include name="components.world" r-if="!(context?.isEmpty ?? true)">
+            Ultra Heroes!
+        </r-include>
+        <r-block r-else> World?</r-block>
+    </h1>
+    <ol>
+        <li r-for-every="context">
+            <p>
+                <r-include name="components.hello-me"><r-item /></r-include>
+            </p>
+            <p>Index: <r-index /> or +1 = <r-eval line="index+1" /></p>
+        </li>
+        <li r-else>No more heroes...</li>
+    </ol>
+
+    <p><r-value of="req.url.string" /></p>
+</main>
+<title r-add-to-slot="head">Hero List</title>
+```
+
 ## How to Use
 
-If you would like to use it in your own project, you would need to add the `ReparseRuntime` as a dependency to your project.
+### Installation
 
-Here is the help for the tool when it is run on it own:
+If you would like to use it in your own project, firstly, add it to your package dependencies like this:
+
+```swift
+.package(url: "https://github.com/RussBaz/experimental-reparse-html.git", from: "0.0.5"),
+```
+
+Then add the `ReparseRuntime` as a dependency to your target like this:
+
+```swift
+.product(name: "ReparseRuntime", package: "experimental-reparse-html"),
+```
+
+### As a Standalone Tool
+
+To use it as a standalone tool, you would need to `git clone` this repo and then compile the tool like this: `swift build -c release`. Then copy the built tool form the build folder to anywhere you want and run. Otherwise, you can just call `swift run reparse` from inside this project folder, providing valid arguments and options.
+
+Here is the help page for the tool:
 
 ```
 USAGE: reparse <location> <destination> [--file-name <file-name>] [--file-extension <file-extension>] [--enum-name <enum-name>] [--imports <imports> ...] [--parameters <parameters> ...] [--protocols <protocols> ...] [--dry-run]
@@ -28,12 +76,58 @@ OPTIONS:
   --enum-name <enum-name> The name of the generated enum (default: Pages)
   --imports <imports>     List of global imports
   --parameters <parameters>
-                          List of shared parameters (parameters to be added to every 'include' function) in a form of '[?][label:]name:type[=default]' where the optional parts are in square brackets. The question mark at the beginning indicates
-                          that the parameter will be overriden by a local requirement if it is present.
-  --protocols <protocols> A list of protocols to apply to enums with render functions in them in a form of 'name[:associatedName:associatedType]' where the optional parts are in square brackets. Optional part can be repeated any number of times.
+                          List of shared parameters (parameters to be added to
+                          every 'include' function) in a form of
+                          '[?][label:]name:type[=default]' where the optional
+                          parts are in square brackets. The question mark at the
+                          beginning indicates that the parameter will be
+                          overriden by a local requirement if it is present.
+  --protocols <protocols> A list of protocols to apply to enums with render
+                          functions in them in a form of
+                          'name[:associatedName:associatedType]' where the
+                          optional parts are in square brackets. Optional part
+                          can be repeated any number of times.
   --dry-run               Write the output to the console instead of file
   -h, --help              Show help information.
 ```
+
+### Command Plugin
+
+You can also run it as a command plugin from the terminal. You only have to follow the installation instructions for it to be automatically available.
+
+To list available plugins:
+
+```
+swift package plugin --list
+```
+
+To use an automatic Vapor settings, use:
+
+```
+swift package plugin reparse --preset vapor
+```
+
+NOTE: Every Vapor based preset adds 'req: Request' as a first parameter to the generated functions.
+
+of if you are using `VaporHX`:
+
+```
+swift package plugin reparse --preset vaporhx
+```
+
+NOTE: If you are to use it with VaporHX, then you can only 'require' `context` variables because otherwise the genrated code will no longer conform to the `HXTemplateable` protocol, required for automatic use of generated templates.
+
+In addition to to 'req: Request' coming from a Vapor preset, it also adds 'isPage: Bool' and 'context: Context' parameters. 'isPage' is true when the template is expected to return the whole page and it is false when a fragment of the page is expected (in-place update). Then 'Context' type is `EmptyContext` struct by default, provided by the VaporHX. However, if you specify the 'context' using a 'r-require' tag, then it will be replaced with your own type without breaking compatibility with the VaporHX.
+
+If you do not use any preset, then all the relative routes would be pointing at the project root folder.
+
+All the options you can pass are the same except the location and destination arguments are replaced by the following options:
+
+`--source` to specify a different root folder other than than the project root
+
+`--target` to pick a target from the package targets as a destination for the generated file
+
+`--destination` as a list of path components to provide a different output folder relative to the source root folder for the target (or project root if none selected)
 
 ## Syntax
 
