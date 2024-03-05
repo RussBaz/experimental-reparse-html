@@ -10,7 +10,7 @@ NOTE: The master branch is way ahead of the latest release as it includes many f
 
 ## Example
 
-Here is an example of the `Reparse` syntax as used in the bundled `Example` project:
+Here is an example of the `Reparse` syntax as used in the bundled `Example` project (with few lines removed for brevity):
 
 ```html
 <r-require name="context" type="[String]" label="superheroes" />
@@ -18,24 +18,24 @@ Here is an example of the `Reparse` syntax as used in the bundled `Example` proj
 <r-extend name="body" />
 
 <main>
-    <h1>
-        Hello
-        <r-include name="components.world" r-if="!(context?.isEmpty ?? true)">
-            Ultra Heroes!
-        </r-include>
-        <r-block r-else> World?</r-block>
-    </h1>
-    <ol>
-        <li r-for-every="context">
-            <p>
-                <r-include name="components.hello-me"><r-item /></r-include>
-            </p>
-            <p>Index: <r-index /> or +1 = <r-eval line="index+1" /></p>
-        </li>
-        <li r-else>No more heroes...</li>
-    </ol>
+  <h1>
+    Hello
+    <r-include name="components.world" r-if="!(context?.isEmpty ?? true)">
+      Ultra Heroes!
+    </r-include>
+    <r-block r-else> World?</r-block>
+  </h1>
+  <ol>
+    <li r-for-every="context">
+      <p>
+        <r-include name="components.hello-me"><r-item /></r-include>
+      </p>
+      <p>Index: <r-index /> or +1 = <r-eval line="index+1" /></p>
+    </li>
+    <li r-else>No more heroes...</li>
+  </ol>
 
-    <p><r-value of="req.url.string" /></p>
+  <p><r-value of="req.url.string" /></p>
 </main>
 <title r-add-to-slot="head">Hero List</title>
 ```
@@ -47,7 +47,7 @@ Here is an example of the `Reparse` syntax as used in the bundled `Example` proj
 If you would like to use it in your own project, firstly, add it to your package dependencies like this:
 
 ```swift
-.package(url: "https://github.com/RussBaz/experimental-reparse-html.git", from: "0.0.5"),
+.package(url: "https://github.com/RussBaz/experimental-reparse-html.git", from: "0.0.6"),
 ```
 
 Then add the `ReparseRuntime` as a dependency to your target like this:
@@ -141,9 +141,9 @@ There are a few types of control attributes and can be separated in 3 groups:
 
 Most html tags can be equipped with one of the conditional control attributes:
 
--   **r-if="condition"**
--   **r-else-if="condition"**
--   **r-else**
+- **r-if="condition"**
+- **r-else-if="condition"**
+- **r-else**
 
 If the condition (which must be a valid Swift expression) is satisfied than the html tag and its contents are rendered.
 
@@ -151,34 +151,34 @@ If the condition is satisfied, then a special variable called `previousUnnamedIf
 
 Optionally, you can save the result of the condition to a different variable using an additional attribute:
 
--   **r-tag="tag-name"**
+- **r-tag="tag-name"**
 
 #### Loops
 
--   **r-for-every="sequence"**
+- **r-for-every="sequence"**
 
 #### Slots
 
--   **r-add-to-slot="slot-name"**
--   **r-replace-slot="slot-name"**
+- **r-add-to-slot="slot-name"**
+- **r-replace-slot="slot-name"**
 
 ### Control Tags
 
--   **`<r-extend name="template-name" />`** (must be before any tag other than r-require) to wrap the current template into a default slot of the specified template
--   **`<r-require label="optional-label" name="var-name" type="var-type" default="optional-default" />`** (must be before any tag other than r-extend) to define a variable that must be passed into the template from the caller
--   **`<r-include name="template-name" />`** to include another template or
--   **`<r-include name="template-name"> default slot </r-include>`** to include a template with a default slot provided
--   **`<r-block> some data </r-block>`** to group some part of template, e.g. wrap some text with it and now you can apply control attributes to it.
--   **`<r-set name="attr-name" value="attr-value" />`** to replace an attribute in a preceding tag (skipping other set/unset tags) or
--   **`<r-set name="attr-name" value="attr-value" append />`** to append to it instead
--   **`<r-unset name="attr-name" />`** to remove an atttribute from a preceding tag (skipping other set/unset tags)
--   **`<r-var name="var-name" line="expression" />`** to assign the result of an expression to a variable
--   **`<r-value of="name" default="optional-val" />`** to paste the value of the specified variable or the provided default value if the value was `nil`
--   **`<r-eval line="expression" />`** evaluate the expression and paste its result
--   **`<r-slot name="optional-name" />`** to mark an area to be filled by the incoming outer slot. If no name is provided, it will be known as 'default' or
--   **`<r-slot name="optional-name"> default slot </r-slot>`** to declare a slot and provide the default contents if no matching slot found in the incoming outer slots
--   **`<r-index />`** (inside the loops only) to paste the index of the current iteration of the innermost loop
--   **`<r-value />`** (inside the loops only) to paste the value of the current iteration of the innermost loop
+- **`<r-extend name="template-name" />`** (must be before any tag other than r-require) to wrap the current template into a default slot of the specified template
+- **`<r-require label="optional-label" name="var-name" type="var-type" default="optional-default" />`** (must be before any tag other than r-extend) to define a variable that must be passed into the template from the caller
+- **`<r-include name="template-name" />`** to include another template or
+- **`<r-include name="template-name"> default slot </r-include>`** to include a template with a default slot provided
+- **`<r-block> some data </r-block>`** to group some part of template, e.g. wrap some text with it and now you can apply control attributes to it.
+- **`<r-set name="attr-name" value="attr-value" />`** to replace an attribute in a preceding tag (skipping other set/unset tags) or
+- **`<r-set name="attr-name" value="attr-value" append />`** to append to it instead
+- **`<r-unset name="attr-name" />`** to remove an atttribute from a preceding tag (skipping other set/unset tags)
+- **`<r-var name="var-name" line="expression" />`** to assign the result of an expression to a variable
+- **`<r-value of="name" default="optional-val" />`** to paste the value of the specified variable or the provided default value if the value was `nil`
+- **`<r-eval line="expression" />`** evaluate the expression and paste its result
+- **`<r-slot name="optional-name" />`** to mark an area to be filled by the incoming outer slot. If no name is provided, it will be known as 'default' or
+- **`<r-slot name="optional-name"> default slot </r-slot>`** to declare a slot and provide the default contents if no matching slot found in the incoming outer slots
+- **`<r-index />`** (inside the loops only) to paste the index of the current iteration of the innermost loop
+- **`<r-value />`** (inside the loops only) to paste the value of the current iteration of the innermost loop
 
 ## How does it work?
 

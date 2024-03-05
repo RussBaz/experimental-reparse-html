@@ -3,25 +3,33 @@
 <r-extend name="body" />
 
 <main>
-    <h1>
-        Hello
-        <r-include name="components.world" r-if="!(context?.isEmpty ?? true)">
-            Ultra Heroes!
-        </r-include>
-        <r-block r-else> World?</r-block>
-    </h1>
-    <ol>
-        <li r-for-every="context">
-            <p>
-                <r-include name="components.hello-me"><r-item /></r-include>
-            </p>
-            <p>
-                Index: <r-index /> or +1 = <r-eval line="index+1" />
-            </p>
-        </li>
-        <li r-else>No more heroes...</li>
-    </ol>
+  <h1>
+    Hello
+    <r-include name="components.world" r-if="!(context?.isEmpty ?? true)">
+      Ultra Heroes!
+    </r-include>
+    <r-block r-else> World?</r-block>
+  </h1>
+  <ol>
+    <li r-for-every="context">
+      <p class='base'>
+        <r-set name="class" value=" rose" append />
+        <r-include name="components.hello-me"><r-item /></r-include>
+      </p>
+      <p>Index: <r-index /> or +1 = <r-eval line="index+1" /></p>
+    </li>
+    <li r-else>No more heroes...</li>
+  </ol>
 
-    <p><r-value of="req.url.string" /></p>
+  <p><r-value of="req.url.string" /></p>
+  <button
+      class="button"
+      hx-post="/auth/logout?next=/"
+      hx-target="body"
+      data-loading-delay
+      data-loading-disable
+  >
+      What's up?
+  </button>
 </main>
 <title r-add-to-slot="head">Hero List</title>

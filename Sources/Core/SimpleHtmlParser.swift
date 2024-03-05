@@ -6,10 +6,6 @@ public final class SimpleHtmlParser {
         let content: AST.Content
     }
 
-    enum AttributeValueWrapper {
-        case single, double, none
-    }
-
     enum DataState {
         case script(depth: Int)
         case style
@@ -22,7 +18,7 @@ public final class SimpleHtmlParser {
         case lookingForAttributeName(tag: String, attributes: SwiftAttributeStorage, key: String)
         case lookineForAttributeSeparator(tag: String, attributes: SwiftAttributeStorage, key: String)
         case lookingForAttributeValueStart(tag: String, attributes: SwiftAttributeStorage, key: String)
-        case lookingForAttributeValue(tag: String, attributes: SwiftAttributeStorage, key: String, value: String, wrapper: AttributeValueWrapper)
+        case lookingForAttributeValue(tag: String, attributes: SwiftAttributeStorage, key: String, value: String, wrapper: SwiftAttributeStorage.AttributeValueWrapper)
         case lookingForVoidTagEnd(tag: String, attributes: SwiftAttributeStorage)
         case lookingForClosingTagName(name: String)
         case lookingForClosingTagEnd(name: String)
@@ -133,14 +129,16 @@ public final class SimpleHtmlParser {
         case let .lookingForAttributeName(tag, attributes, key):
             if char == " " {
                 state = .lookineForAttributeSeparator(tag: tag, attributes: attributes, key: key)
+            } else if char == "\n" {
+                state = .lookingForAttributeName(tag: tag, attributes: attributes, key: key)
             } else if char == "=" {
                 state = .lookingForAttributeValueStart(tag: tag, attributes: attributes, key: key)
             } else if char == ">" {
-                attributes.append(key: key, value: "", wrapped: false)
+                attributes.append(key: key, value: "", wrapper: .none)
                 state = .lookingForText(buffer: "")
                 appendTag(.openingTag(name: tag, attributes: attributes), till: index)
             } else if char == "/" {
-                attributes.append(key: key, value: "", wrapped: false)
+                attributes.append(key: key, value: "", wrapper: .none)
                 state = .lookingForVoidTagEnd(tag: tag, attributes: attributes)
             } else if !["\"", "'"].contains(char), !isControlCharacter(char) {
                 state = .lookingForAttributeName(tag: tag, attributes: attributes, key: key + String(char))
@@ -154,13 +152,16 @@ public final class SimpleHtmlParser {
                 state = .lookingForAttributeValueStart(tag: tag, attributes: attributes, key: key)
             } else if char == ">" {
                 state = .lookingForText(buffer: "")
-                attributes.append(key: key, value: "", wrapped: false)
+                attributes.append(key: key, value: "", wrapper: .none)
                 appendTag(.openingTag(name: tag, attributes: attributes), till: index)
             } else if char == "/" {
-                attributes.append(key: key, value: "", wrapped: false)
+                attributes.append(key: key, value: "", wrapper: .none)
                 state = .lookingForVoidTagEnd(tag: tag, attributes: attributes)
-            } else if !["\"", "'"].contains(char), char == "\n" || !isControlCharacter(char) {
-                attributes.append(key: key, value: "", wrapped: false)
+            } else if char == "\n" {
+                attributes.append(key: key, value: "", wrapper: .none)
+                state = .lookingForAttributes(tag: tag, attributes: attributes)
+            } else if !["\"", "'"].contains(char), !isControlCharacter(char) {
+                attributes.append(key: key, value: "", wrapper: .none)
                 state = .lookingForAttributeName(tag: tag, attributes: attributes, key: String(char))
             } else {
                 cancelTag(till: index)
@@ -180,7 +181,7 @@ public final class SimpleHtmlParser {
         case let .lookingForAttributeValue(tag, attributes, key, value, wrapper):
             if char == " " {
                 if case .none = wrapper {
-                    attributes.append(key: key, value: value, wrapped: false)
+                    attributes.append(key: key, value: value, wrapper: .none)
                     state = .lookingForAttributes(tag: tag, attributes: attributes)
                 } else {
                     state = .lookingForAttributeValue(tag: tag, attributes: attributes, key: key, value: value + String(char), wrapper: wrapper)
@@ -188,9 +189,9 @@ public final class SimpleHtmlParser {
             } else if char == "\"" {
                 switch wrapper {
                 case .single:
-                    state = .lookingForAttributeValue(tag: tag, attributes: attributes, key: key, value: value + String(char), wrapper: wrapper)
+                    state = .lookingForAttributeValue(tag: tag, attributes: attributes, key: key, value: value + String(char), wrapper: .single)
                 case .double:
-                    attributes.append(key: key, value: value, wrapped: true)
+                    attributes.append(key: key, value: value, wrapper: .double)
                     state = .lookingForAttributes(tag: tag, attributes: attributes)
                 case .none:
                     cancelTag(till: index)
@@ -198,18 +199,18 @@ public final class SimpleHtmlParser {
             } else if char == "'" {
                 switch wrapper {
                 case .single:
-                    attributes.append(key: key, value: value, wrapped: true)
+                    attributes.append(key: key, value: value, wrapper: .single)
                     state = .lookingForAttributes(tag: tag, attributes: attributes)
                 case .double:
-                    state = .lookingForAttributeValue(tag: tag, attributes: attributes, key: key, value: value + String(char), wrapper: wrapper)
+                    state = .lookingForAttributeValue(tag: tag, attributes: attributes, key: key, value: value + String(char), wrapper: .double)
                 case .none:
                     cancelTag(till: index)
                 }
             } else if char == ">", case .none = wrapper, !value.isEmpty {
-                attributes.append(key: key, value: value, wrapped: false)
+                attributes.append(key: key, value: value, wrapper: .none)
                 appendTag(.openingTag(name: tag, attributes: attributes), till: index)
             } else if char == "/", case .none = wrapper, !value.isEmpty {
-                attributes.append(key: key, value: value, wrapped: false)
+                attributes.append(key: key, value: value, wrapper: .none)
                 state = .lookingForVoidTagEnd(tag: tag, attributes: attributes)
             } else if !isControlCharacter(char) {
                 state = .lookingForAttributeValue(tag: tag, attributes: attributes, key: key, value: value + String(char), wrapper: wrapper)
@@ -451,35 +452,5 @@ public final class SimpleHtmlParser {
                 state = .lookingForText(buffer: "")
             }
         }
-    }
-}
-
-extension SimpleHtmlParser.AttributeValueWrapper {
-    func isWrapped() -> Bool {
-        if case .none = self {
-            false
-        } else {
-            true
-        }
-    }
-}
-
-extension SwiftAttributeStorage {
-    static func from(attributes: [String: (String, SimpleHtmlParser.AttributeValueWrapper)]) -> SwiftAttributeStorage {
-        let storage = SwiftAttributeStorage()
-        for (key, (value, wrapper)) in attributes {
-            if value.isEmpty {
-                if wrapper.isWrapped() {
-                    storage[key] = .string("")
-                } else {
-                    storage[key] = .flag
-                }
-
-            } else {
-                storage[key] = .string(value)
-            }
-        }
-
-        return storage
     }
 }

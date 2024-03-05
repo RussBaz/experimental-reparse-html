@@ -1,7 +1,11 @@
 public final class SwiftAttributeStorage {
     public enum AttributeValue {
         case flag
-        case string(String)
+        case string(String, wrapper: AttributeValueWrapper)
+    }
+
+    public enum AttributeValueWrapper {
+        case single, double, none
     }
 
     var attributes: [String: AttributeValue] = [:]
@@ -16,37 +20,37 @@ public final class SwiftAttributeStorage {
         return storage
     }
 
-    public func append(key: String, value: String, wrapped: Bool) {
-        if wrapped {
-            attributes[key] = .string(value)
+    public func append(key: String, value: String, wrapper: AttributeValueWrapper) {
+        if wrapper != .none {
+            attributes[key] = .string(value, wrapper: wrapper)
         } else {
             if value.isEmpty {
                 attributes[key] = .flag
             } else {
-                attributes[key] = .string(value)
+                attributes[key] = .string(value, wrapper: wrapper)
             }
         }
     }
 
-    public func update(key: String, with value: AttributeValue, replacing: Bool) {
-        if replacing {
-            attributes[key] = value
-        } else {
-            if let oldValue = attributes[key] {
-                switch (oldValue, value) {
-                case (.flag, .flag):
-                    attributes[key] = .flag
-                case let (.flag, .string(v2)):
-                    attributes[key] = .string(v2)
-                case let (.string(v1), .flag):
-                    attributes[key] = .string(v1)
-                case let (.string(v1), .string(v2)):
-                    attributes[key] = .string(v1 + v2)
-                }
-            } else {
-                attributes[key] = value
+    public func append(to key: String, value: AttributeValue) {
+        if let oldValue = attributes[key] {
+            switch (oldValue, value) {
+            case (.flag, .flag):
+                attributes[key] = .flag
+            case let (.flag, .string(v2, wrapper: wrapper2)):
+                attributes[key] = .string(v2, wrapper: wrapper2)
+            case let (.string(v1, wrapper: wrapper1), .flag):
+                attributes[key] = .string(v1, wrapper: wrapper1)
+            case let (.string(v1, wrapper1), .string(v2, _)):
+                attributes[key] = .string(v1 + wrapper1.escapeQuotations(in: v2), wrapper: wrapper1)
             }
+        } else {
+            attributes[key] = value
         }
+    }
+
+    public func replace(key: String, with value: AttributeValue) {
+        attributes[key] = value
     }
 
     public func has(_ name: String) -> Bool {
@@ -88,8 +92,15 @@ public final class SwiftAttributeStorage {
             switch value {
             case .flag:
                 lines.append("\"\(key)\": .flag")
-            case let .string(v):
-                lines.append("\"\(key)\": .string(\"\(v)\")")
+            case let .string(v, wrapper):
+                switch wrapper {
+                case .single:
+                    lines.append("\"\(key)\": .string(\"\(v)\", wrapper: .single)")
+                case .double:
+                    lines.append("\"\(key)\": .string(\"\(v)\", wrapper: .double)")
+                case .none:
+                    lines.append("\"\(key)\": .string(\"\(v)\", wrapper: .none)")
+                }
             }
         }
 
@@ -108,8 +119,12 @@ extension SwiftAttributeStorage: CustomStringConvertible {
             switch attribute {
             case .flag:
                 result += " \(key)"
-            case let .string(value):
-                result += " \(key)=\"\(value)\""
+            case let .string(value, wrapper):
+                if wrapper == .single {
+                    result += " \(key)='\(value)'"
+                } else {
+                    result += " \(key)=\"\(value)\""
+                }
             }
         }
         return result
@@ -122,7 +137,7 @@ public extension SwiftAttributeStorage.AttributeValue {
         case .flag:
             // Not a standard interpretation of an empty string
             "true"
-        case let .string(string):
+        case let .string(string, _):
             string
         }
     }
@@ -131,8 +146,15 @@ public extension SwiftAttributeStorage.AttributeValue {
         switch self {
         case .flag:
             ".flag"
-        case let .string(string):
-            ".string(\"\(string)\")"
+        case let .string(string, wrapper):
+            switch wrapper {
+            case .single:
+                ".string(\"\(string)\", wrapper: .single)"
+            case .double:
+                ".string(\"\(string)\", wrapper: .double)"
+            case .none:
+                ".string(\"\(string)\", wrapper: .none)"
+            }
         }
     }
 }
@@ -141,5 +163,46 @@ extension SwiftAttributeStorage.AttributeValue: Equatable {}
 extension SwiftAttributeStorage: Equatable {
     public static func == (lhs: SwiftAttributeStorage, rhs: SwiftAttributeStorage) -> Bool {
         lhs.attributes == rhs.attributes
+    }
+}
+
+extension SwiftAttributeStorage.AttributeValueWrapper {
+    func isWrapped() -> Bool {
+        if case .none = self {
+            false
+        } else {
+            true
+        }
+    }
+
+    func escapeQuotations(in value: String) -> String {
+        switch self {
+        case .single:
+            value.replacing("'", with: "&#39")
+        case .double:
+            value.replacing("\"", with: "&quot")
+        case .none:
+            value
+        }
+    }
+}
+
+extension SwiftAttributeStorage {
+    static func from(attributes: [String: (String, AttributeValueWrapper)]) -> SwiftAttributeStorage {
+        let storage = SwiftAttributeStorage()
+        for (key, (value, wrapper)) in attributes {
+            if value.isEmpty {
+                if wrapper.isWrapped() {
+                    storage[key] = .string("", wrapper: wrapper)
+                } else {
+                    storage[key] = .flag
+                }
+
+            } else {
+                storage[key] = .string(value, wrapper: wrapper)
+            }
+        }
+
+        return storage
     }
 }

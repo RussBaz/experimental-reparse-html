@@ -1,6 +1,6 @@
 //
 // ------------------------------
-// reparse version: 0.0.4
+// reparse version: 0.0.5
 // ------------------------------
 // This is an auto-generated file
 // ------------------------------
@@ -14,7 +14,7 @@ enum Pages {
         enum World {
             static var path: String {
                 """
-                /Users/user/Projects/GitHub/experimental-reparse-html/Resources/Pages/Components/world.html
+                /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/Components/world.html
                 """
             }
 
@@ -43,7 +43,7 @@ enum Pages {
         enum HelloMe {
             static var path: String {
                 """
-                /Users/user/Projects/GitHub/experimental-reparse-html/Resources/Pages/Components/hello-me.html
+                /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/Components/hello-me.html
                 """
             }
 
@@ -70,7 +70,7 @@ enum Pages {
     enum Index {
         static var path: String {
             """
-            /Users/user/Projects/GitHub/experimental-reparse-html/Resources/Pages/index.html
+            /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/index.html
             """
         }
 
@@ -80,6 +80,7 @@ enum Pages {
 
         static func include(superheroes context: [String]? = nil, value: Bool? = nil, req: Request) -> SwiftLineStorage {
             let lines = SwiftLineStorage()
+            var attributes: SwiftAttributeStorage
             var previousUnnamedIfTaken = false
 
             lines.extend(Pages.Base.include(req: req))
@@ -88,15 +89,15 @@ enum Pages {
 
 
             <main>
-                <h1>
-                    Hello
+              <h1>
+                Hello
 
             """)
             if !(context?.isEmpty ?? true) {
                 lines.include(Pages.Components.World.include(req: req)) { lines in
                     lines.append("""
 
-                                Ultra Heroes!
+                          Ultra Heroes!
 
                     """)
                 }
@@ -114,25 +115,26 @@ enum Pages {
             }
             lines.append("""
 
-                </h1>
-                <ol>
+              </h1>
+              <ol>
 
             """)
             if let context {
                 for (index, item) in context.enumerated() {
                     lines.append("""
                     <li>
-                                <p>
 
                     """)
+                    attributes = SwiftAttributeStorage.from(attributes: ["class": .string("base", wrapper: .single)])
+                    attributes.append(to: "class", value: .string(" rose", wrapper: .double))
+                    lines.append("<p\(attributes)>")
                     lines.include(Pages.Components.HelloMe.include(req: req)) { lines in
                         lines.append("\(item)")
                     }
                     lines.append("""
 
-                                </p>
-                                <p>
-                                    Index: 
+                          </p>
+                          <p>Index: 
                     """)
                     lines.append("\(index)")
                     lines.append("""
@@ -140,9 +142,8 @@ enum Pages {
                     """)
                     lines.append("\(index + 1)")
                     lines.append("""
-
-                                </p>
-                            </li>
+                    </p>
+                        </li>
                     """)
                 }
                 previousUnnamedIfTaken = if context.isEmpty { false } else { true }
@@ -159,13 +160,16 @@ enum Pages {
             }
             lines.append("""
 
-                </ol>
+              </ol>
 
-                <p>
+              <p>
             """)
             lines.append("\(req.url.string)")
             lines.append("""
             </p>
+              <button data-loading-disable class="button" hx-target="body" hx-post="/auth/logout?next=/" data-loading-delay>
+                  What's up?
+              </button>
             </main>
             """)
             lines.add(slot: "head") { lines in
@@ -181,7 +185,7 @@ enum Pages {
     enum Base {
         static var path: String {
             """
-            /Users/user/Projects/GitHub/experimental-reparse-html/Resources/Pages/base.html
+            /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/base.html
             """
         }
 
@@ -218,7 +222,7 @@ enum Pages {
     enum Body {
         static var path: String {
             """
-            /Users/user/Projects/GitHub/experimental-reparse-html/Resources/Pages/body.html
+            /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/body.html
             """
         }
 
@@ -234,13 +238,13 @@ enum Pages {
 
             attributes = SwiftAttributeStorage.from(attributes: [:])
             if value {
-                attributes.update(key: "class", with: .string("blue"), replacing: false)
+                attributes.append(to: "class", value: .string("blue", wrapper: .double))
                 previousUnnamedIfTaken = true
             } else {
                 previousUnnamedIfTaken = false
             }
             if !previousUnnamedIfTaken {
-                attributes.update(key: "class", with: .string("red"), replacing: false)
+                attributes.append(to: "class", value: .string("red", wrapper: .double))
                 previousUnnamedIfTaken = true
             } else {
                 previousUnnamedIfTaken = false

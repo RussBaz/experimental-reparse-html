@@ -244,13 +244,13 @@ public final class SwiftCodeGenerator {
                         case .elseType:
                             properties.append("if !\(cn) {", at: indentation)
                         }
-                        properties.append("attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: false)", at: indentation + 1)
+                        properties.append("attributes.append(to: \"\(name)\", value: \(value.codeString))", at: indentation + 1)
                         properties.append("\(cn) = true", at: indentation + 1)
                         properties.append("} else {", at: indentation)
                         properties.append("\(cn) = false", at: indentation + 1)
                         properties.append("}", at: indentation)
                     } else {
-                        properties.append("attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: false)", at: indentation)
+                        properties.append("attributes.append(to: \"\(name)\", value: \(value.codeString))", at: indentation)
                     }
                 case let .replace(name: name, value: value, condition: condition):
                     if let condition {
@@ -264,13 +264,13 @@ public final class SwiftCodeGenerator {
                         case .elseType:
                             properties.append("if !\(cn) {", at: indentation)
                         }
-                        properties.append("attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: true)", at: indentation + 1)
+                        properties.append("attributes.replace(key: \"\(name)\", with: \(value.codeString))", at: indentation + 1)
                         properties.append("\(cn) = true", at: indentation + 1)
                         properties.append("} else {", at: indentation)
                         properties.append("\(cn) = false", at: indentation + 1)
                         properties.append("}", at: indentation)
                     } else {
-                        properties.append("attributes.update(key: \"\(name)\", with: \(value.codeString), replacing: true)", at: indentation)
+                        properties.append("attributes.replace(key: \"\(name)\", with: \(value.codeString))", at: indentation)
                     }
                 case let .remove(name: name, condition: condition):
                     if let condition {

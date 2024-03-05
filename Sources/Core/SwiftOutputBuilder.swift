@@ -49,7 +49,7 @@ public final class SwiftOutputBuilder {
         let topLine = """
         //
         // ------------------------------
-        // reparse version: 0.0.5
+        // reparse version: 0.0.6
         // ------------------------------
         // This is an auto-generated file
         // ------------------------------
@@ -141,7 +141,7 @@ public final class SwiftOutputBuilder {
                 .joined(separator: "\n") + "\n\n"
         }
 
-        if protocols.isEmpty {
+        if protocols.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return """
             \(String(repeating: "    ", count: indentation))enum \(page.name) {
             \(buildPathFunc(for: page.path, at: indentation + 1))
@@ -149,7 +149,7 @@ public final class SwiftOutputBuilder {
             \(buildIncludeFunc(for: page))
             \(String(repeating: "    ", count: indentation))}
             """
-        } else if associatedTypes.isEmpty {
+        } else if associatedTypes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return """
             \(String(repeating: "    ", count: indentation))struct \(page.name)\(protocols) {
             \(buildPathFunc(for: page.path, at: indentation + 1))
