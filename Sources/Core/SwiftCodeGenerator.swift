@@ -210,6 +210,11 @@ public final class SwiftCodeGenerator {
             let name = name ?? "previousUnnamedIfTaken"
             properties.append(condition: name)
             let innerGenerator = SwiftCodeGenerator(ast: contents, signatures: signatures, page: properties)
+            
+            // Currently the generator assumes that if the variable is not in defaultValues map,
+            // then it must be an optional variable.
+            // This is not true but it will require parsing the signatures first
+            // This code must be run a later stage
 
             if let _ = properties.defaultValues[forEvery] {
                 properties.append("for (index, item) in \(forEvery).enumerated() {", at: indentation)
@@ -302,10 +307,12 @@ public final class SwiftCodeGenerator {
                 properties.append("// Error: Impossible tag type", at: indentation)
             }
         case let .requirement(name, type, label, value):
-            signatures.append(parameter: .init(type: "\(type)?", name: name, label: label, defaultValue: "nil", canBeOverriden: false), to: properties.name)
-            if let value {
-                properties.appendDefault(name: name, value: value)
-            }
+            signatures.append(parameter: .init(type: type, name: name, label: label, defaultValue: value, canBeOverriden: false), to: properties.name)
+            // Skipping the following block for now.
+            // TODO: find a way to reintroduce this syntax
+//            if let value {
+//                properties.appendDefault(name: name, value: value)
+//            }
         case let .eval(line):
             properties.append("lines.append(\"\\(\(line.trimmingCharacters(in: .whitespacesAndNewlines)))\")", at: indentation)
         case let .value(of: name, defaultValue):
