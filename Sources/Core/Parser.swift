@@ -284,14 +284,15 @@ extension Parser {
     }
 
     func isConditional(_ attrs: ControlAttrs) -> AST? {
-        switch (attrs.ifLine, attrs.ifElseLine, attrs.elseLine, attrs.tagLine) {
-        case let (.some(line), _, _, tag):
+        let tag = attrs.tagLine
+
+        return if let line = attrs.ifLine {
             .conditional(name: tag, check: line, type: .ifType, contents: ASTStorage())
-        case let (.none, .some(line), _, tag):
+        } else if let line = attrs.ifElseLine {
             .conditional(name: tag, check: line, type: .elseIfType, contents: ASTStorage())
-        case let (.none, .none, true, tag):
+        } else if attrs.elseLine {
             .conditional(name: tag, check: "", type: .elseType, contents: ASTStorage())
-        case (.none, .none, false, _):
+        } else {
             nil
         }
     }
@@ -387,8 +388,9 @@ extension Parser {
 
         let label = attributes.find("label")
         let defaultValue = attributes.find("default")
+        let mutable = attributes.find("mutable") != nil
 
-        ast.append(node: .requirement(name: name, type: type, label: label, value: defaultValue))
+        ast.append(node: .requirement(name: name, type: type, label: label, value: defaultValue, mutable: mutable))
     }
 
     func openSetTag(_ tag: AST.TagType, at depth: Int) {

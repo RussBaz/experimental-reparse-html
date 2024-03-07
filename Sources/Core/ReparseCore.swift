@@ -2,11 +2,13 @@ import Foundation
 
 public struct PageDef {
     let path: String
+    let root: String
     let name: [String]
 
-    public init(path: String, name: [String]) {
+    public init(path: String, name: [String], root: String) {
         self.path = path
         self.name = name
+        self.root = root
     }
 }
 
@@ -83,9 +85,9 @@ public enum ReparseCore {
 
         for i in paths {
             let url = URL(fileURLWithPath: "\(path)/\(i)")
-            let path = url.path
-            if path.hasSuffix(".\(ext)") {
-                htmls.append(PageDef(path: path, name: splitFilenameIntoComponents(i, dropping: ext).reversed()))
+            let resultPath = url.path
+            if resultPath.hasSuffix(".\(ext)") {
+                htmls.append(PageDef(path: i, name: splitFilenameIntoComponents(i, dropping: ext).reversed(), root: path))
             }
         }
 

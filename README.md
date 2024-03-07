@@ -1,7 +1,5 @@
 # Reparse - HTML Server Side Templating Super Powers in Swift (Experimental)
 
-NOTE: The master branch is way ahead of the latest release as it includes many fixes and additional features. Please use it while I am preparing for the next release.
-
 ## Three Core Concepts
 
 1. Super Powerful and Flexible Syntax
@@ -20,7 +18,7 @@ Here is an example of the `Reparse` syntax as used in the bundled `Example` proj
 <main>
   <h1>
     Hello
-    <r-include name="components.world" r-if="!(context?.isEmpty ?? true)">
+    <r-include name="components.world" r-if="!context.isEmpty">
       Ultra Heroes!
     </r-include>
     <r-block r-else> World?</r-block>
@@ -47,7 +45,7 @@ Here is an example of the `Reparse` syntax as used in the bundled `Example` proj
 If you would like to use it in your own project, firstly, add it to your package dependencies like this:
 
 ```swift
-.package(url: "https://github.com/RussBaz/experimental-reparse-html.git", from: "0.0.6"),
+.package(url: "https://github.com/RussBaz/experimental-reparse-html.git", from: "0.0.7"),
 ```
 
 Then add the `ReparseRuntime` as a dependency to your target like this:
@@ -133,6 +131,10 @@ All the options you can pass are the same except the location and destination ar
 
 All special attributes and tags will be removed by the compilation and must not appear in the output of the render function. If they do, then it is a bug.
 
+### String Interpolation
+
+You can use the standard swift syntax for string interpolation `\(expression)` to insert any swift expression into a text part of the html template - inside the attribute values and the text between tags.
+
 ### Control Attributes
 
 There are a few types of control attributes and can be separated in 3 groups:
@@ -166,6 +168,7 @@ Optionally, you can save the result of the condition to a different variable usi
 
 - **`<r-extend name="template-name" />`** (must be before any tag other than r-require) to wrap the current template into a default slot of the specified template
 - **`<r-require label="optional-label" name="var-name" type="var-type" default="optional-default" />`** (must be before any tag other than r-extend) to define a variable that must be passed into the template from the caller
+- **`<r-require label="optional-label" name="var-name" type="var-type" default="optional-default" mutable />`** or if you need to remap it to a mutable variable of the same name
 - **`<r-include name="template-name" />`** to include another template or
 - **`<r-include name="template-name"> default slot </r-include>`** to include a template with a default slot provided
 - **`<r-block> some data </r-block>`** to group some part of template, e.g. wrap some text with it and now you can apply control attributes to it.

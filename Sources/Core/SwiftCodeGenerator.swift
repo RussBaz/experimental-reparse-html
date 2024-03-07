@@ -32,6 +32,9 @@ public final class SwiftCodeGenerator {
         }
         properties.append(at: indentation + 1) {
             var result = [String]()
+            for value in self.properties.mutableParameters {
+                result.append("var \(value) = \(value)")
+            }
             for (assignment, value) in self.properties.defaultValues {
                 result.append("let \(assignment) = \(assignment) ?? \(value)")
             }
@@ -210,26 +213,15 @@ public final class SwiftCodeGenerator {
             let name = name ?? "previousUnnamedIfTaken"
             properties.append(condition: name)
             let innerGenerator = SwiftCodeGenerator(ast: contents, signatures: signatures, page: properties)
-            
-            // Currently the generator assumes that if the variable is not in defaultValues map,
-            // then it must be an optional variable.
-            // This is not true but it will require parsing the signatures first
-            // This code must be run a later stage
 
-            if let _ = properties.defaultValues[forEvery] {
-                properties.append("for (index, item) in \(forEvery).enumerated() {", at: indentation)
-                innerGenerator.generateBody(at: indentation + 1)
-                properties.append("}", at: indentation)
-            } else {
-                properties.append("if let \(forEvery) {", at: indentation)
-                properties.append("for (index, item) in \(forEvery).enumerated() {", at: indentation + 1)
-                innerGenerator.generateBody(at: indentation + 2)
-                properties.append("}", at: indentation + 1)
-                properties.append("\(name) = if \(forEvery).isEmpty { false } else { true }", at: indentation + 1)
-                properties.append("} else {", at: indentation)
-                properties.append("\(name) = false", at: indentation + 1)
-                properties.append("}", at: indentation)
-            }
+            properties.append("if \(forEvery).isEmpty {", at: indentation)
+            properties.append("\(name) = false", at: indentation + 1)
+            properties.append("} else {", at: indentation)
+            properties.append("for (index, item) in \(forEvery).enumerated() {", at: indentation + 1)
+            innerGenerator.generateBody(at: indentation + 2)
+            properties.append("}", at: indentation + 1)
+            properties.append("\(name) = true", at: indentation + 1)
+            properties.append("}", at: indentation)
         case let .modifiers(applying: modifiers, tag: tag):
             guard !modifiers.isEmpty else { return }
             let attributes = (tag.attributes ?? SwiftAttributeStorage()).codeString
@@ -306,13 +298,12 @@ public final class SwiftCodeGenerator {
             case .closingTag:
                 properties.append("// Error: Impossible tag type", at: indentation)
             }
-        case let .requirement(name, type, label, value):
+        case let .requirement(name, type, label, value, mutable):
             signatures.append(parameter: .init(type: type, name: name, label: label, defaultValue: value, canBeOverriden: false), to: properties.name)
-            // Skipping the following block for now.
-            // TODO: find a way to reintroduce this syntax
-//            if let value {
-//                properties.appendDefault(name: name, value: value)
-//            }
+
+            if mutable {
+                properties.appendMutable(name: name)
+            }
         case let .eval(line):
             properties.append("lines.append(\"\\(\(line.trimmingCharacters(in: .whitespacesAndNewlines)))\")", at: indentation)
         case let .value(of: name, defaultValue):

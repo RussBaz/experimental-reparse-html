@@ -15,19 +15,22 @@ public final class PageProperties {
     }
 
     let name: String
+    let rootPath: String
     let fileExtension: String
     let enumName: String
     var lines: [LineDef] = []
     var conditionTags: [String] = []
     var defaultValues: [String: String] = [:]
+    var mutableParameters: [String] = []
     var modifiersPresent = false
     var protocols: [ProtocolCompliance] = []
 
-    init(name: String, fileExtension: String, enumName: String, protocols: [ProtocolCompliance]) {
+    init(name: String, rootPath: String, fileExtension: String, enumName: String, protocols: [ProtocolCompliance]) {
         self.name = name
         self.fileExtension = fileExtension
         self.enumName = enumName
         self.protocols = protocols
+        self.rootPath = rootPath
     }
 
     func clear() {
@@ -76,6 +79,12 @@ public final class PageProperties {
 
     func appendDefault(name: String, value: String) {
         defaultValues[name] = value
+    }
+
+    func appendMutable(name: String) {
+        guard !mutableParameters.contains(name) else { return }
+
+        mutableParameters.append(name)
     }
 
     func asText(at indenation: Int = 0) -> String {

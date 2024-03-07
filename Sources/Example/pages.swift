@@ -1,6 +1,6 @@
 //
 // ------------------------------
-// reparse version: 0.0.5
+// reparse version: 0.0.7
 // ------------------------------
 // This is an auto-generated file
 // ------------------------------
@@ -12,12 +12,7 @@ import Vapor
 enum Pages {
     enum Components {
         enum World {
-            static var path: String {
-                """
-                /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/Components/world.html
-                """
-            }
-
+            // Template: ./Components/world.html
             static func render(req: Request) -> String {
                 include(req: req).render()
             }
@@ -41,12 +36,7 @@ enum Pages {
         }
 
         enum HelloMe {
-            static var path: String {
-                """
-                /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/Components/hello-me.html
-                """
-            }
-
+            // Template: ./Components/hello-me.html
             static func render(req: Request) -> String {
                 include(req: req).render()
             }
@@ -68,17 +58,12 @@ enum Pages {
     }
 
     enum Index {
-        static var path: String {
-            """
-            /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/index.html
-            """
-        }
-
-        static func render(superheroes context: [String]? = nil, value: Bool? = nil, req: Request) -> String {
+        // Template: ./index.html
+        static func render(superheroes context: [String], value: Bool = false, req: Request) -> String {
             include(superheroes: context, value: value, req: req).render()
         }
 
-        static func include(superheroes context: [String]? = nil, value: Bool? = nil, req: Request) -> SwiftLineStorage {
+        static func include(superheroes context: [String], value: Bool = false, req: Request) -> SwiftLineStorage {
             let lines = SwiftLineStorage()
             var attributes: SwiftAttributeStorage
             var previousUnnamedIfTaken = false
@@ -93,7 +78,7 @@ enum Pages {
                 Hello
 
             """)
-            if !(context?.isEmpty ?? true) {
+            if !context.isEmpty {
                 lines.include(Pages.Components.World.include(req: req)) { lines in
                     lines.append("""
 
@@ -119,13 +104,15 @@ enum Pages {
               <ol>
 
             """)
-            if let context {
+            if context.isEmpty {
+                previousUnnamedIfTaken = false
+            } else {
                 for (index, item) in context.enumerated() {
                     lines.append("""
                     <li>
 
                     """)
-                    attributes = SwiftAttributeStorage.from(attributes: ["class": .string("base", wrapper: .single)])
+                    attributes = SwiftAttributeStorage.from(attributes: ["class": .string("base", wrapper: .double)])
                     attributes.append(to: "class", value: .string(" rose", wrapper: .double))
                     lines.append("<p\(attributes)>")
                     lines.include(Pages.Components.HelloMe.include(req: req)) { lines in
@@ -146,9 +133,7 @@ enum Pages {
                         </li>
                     """)
                 }
-                previousUnnamedIfTaken = if context.isEmpty { false } else { true }
-            } else {
-                previousUnnamedIfTaken = false
+                previousUnnamedIfTaken = true
             }
             if !previousUnnamedIfTaken {
                 lines.append("""
@@ -167,8 +152,8 @@ enum Pages {
             lines.append("\(req.url.string)")
             lines.append("""
             </p>
-              <button data-loading-disable class="button" hx-target="body" hx-post="/auth/logout?next=/" data-loading-delay>
-                  What's up?
+              <button hx-post="/auth/logout?next=/" hx-target="body" data-loading-delay class="button" data-loading-disable>
+                What's up?
               </button>
             </main>
             """)
@@ -183,12 +168,7 @@ enum Pages {
     }
 
     enum Base {
-        static var path: String {
-            """
-            /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/base.html
-            """
-        }
-
+        // Template: ./base.html
         static func render(req: Request) -> String {
             include(req: req).render()
         }
@@ -220,18 +200,12 @@ enum Pages {
     }
 
     enum Body {
-        static var path: String {
-            """
-            /Users/russ/Projects/GitHub/ReparseHtml/Resources/Pages/body.html
-            """
-        }
-
-        static func render(req: Request, value: Bool? = nil) -> String {
+        // Template: ./body.html
+        static func render(req: Request, value: Bool = false) -> String {
             include(req: req, value: value).render()
         }
 
-        static func include(req _: Request, value: Bool? = nil) -> SwiftLineStorage {
-            let value = value ?? false
+        static func include(req _: Request, value: Bool = false) -> SwiftLineStorage {
             let lines = SwiftLineStorage()
             var attributes: SwiftAttributeStorage
             var previousUnnamedIfTaken = false

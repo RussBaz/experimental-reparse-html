@@ -14,6 +14,6 @@ struct SampleController: RouteCollection {
 
     func hello(req: Request) throws -> View {
         let queries = try req.query.decode(HeroQuery.self)
-        return View(data: ByteBuffer(string: Pages.Index.render(superheroes: queries.heroes, value: queries.flag, req: req)))
+        return View(data: ByteBuffer(string: Pages.Index.render(superheroes: queries.heroes ?? [], value: queries.flag ?? false, req: req)))
     }
 }

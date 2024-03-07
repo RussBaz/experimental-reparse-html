@@ -49,7 +49,7 @@ public final class SwiftOutputBuilder {
         let topLine = """
         //
         // ------------------------------
-        // reparse version: 0.0.6
+        // reparse version: 0.0.7
         // ------------------------------
         // This is an auto-generated file
         // ------------------------------
@@ -122,11 +122,7 @@ public final class SwiftOutputBuilder {
 
     func buildPathFunc(for path: String, at indentation: Int = 0) -> String {
         """
-        \(String(repeating: "    ", count: indentation))static var path: String {
-        \(String(repeating: "    ", count: indentation))    \"\"\"
-        \(String(repeating: "    ", count: indentation))    \(path)
-        \(String(repeating: "    ", count: indentation))    \"\"\"
-        \(String(repeating: "    ", count: indentation))}
+        \(String(repeating: "    ", count: indentation))// Template: ./\(path)
         """
     }
 
@@ -171,12 +167,12 @@ public final class SwiftOutputBuilder {
 
 public extension SwiftOutputBuilder.RendererDef {
     init?(page: PageDef, signatures: SwiftPageSignatures, protocols: [PageProperties.ProtocolCompliance], fileExtension ext: String, enumName: String, at indentation: Int) {
-        guard let contents = try? String(contentsOfFile: page.path) else { return nil }
+        guard let contents = try? String(contentsOfFile: "\(page.root)/\(page.path)") else { return nil }
         guard let storage = Parser.parse(html: contents) else { return nil }
         guard let fragmentName = page.name.first else { return nil }
         let fullName = page.name.reversed().joined(separator: ".")
 
-        let properties = PageProperties(name: fullName, fileExtension: ext, enumName: enumName, protocols: protocols)
+        let properties = PageProperties(name: fullName, rootPath: page.root, fileExtension: ext, enumName: enumName, protocols: protocols)
 
         let generator = SwiftCodeGenerator(ast: storage, signatures: signatures, page: properties)
 
