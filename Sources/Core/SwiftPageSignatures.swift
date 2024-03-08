@@ -152,12 +152,7 @@ extension SwiftPageSignatures {
                     guard let cached = resolved[i] else { continue }
 
                     for c in cached {
-                        let r = buffer.filter { $0.name == c.name }
-
-                        if r.isEmpty {
-                            buffer.append(c)
-                        } else {
-                            buffer.removeAll(where: { $0.name == c.name })
+                        if !buffer.contains(where: { $0.name == c.name }) {
                             buffer.append(c)
                         }
                     }

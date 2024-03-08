@@ -59,11 +59,11 @@ enum Pages {
 
     enum Index {
         // Template: ./index.html
-        static func render(superheroes context: [String], value: Bool = false, req: Request) -> String {
-            include(superheroes: context, value: value, req: req).render()
+        static func render(req: Request, superheroes context: [String], value: Bool = false) -> String {
+            include(req: req, superheroes: context, value: value).render()
         }
 
-        static func include(superheroes context: [String], value: Bool = false, req: Request) -> SwiftLineStorage {
+        static func include(req: Request, superheroes context: [String], value: Bool = false) -> SwiftLineStorage {
             let lines = SwiftLineStorage()
             var attributes: SwiftAttributeStorage
             var previousUnnamedIfTaken = false
@@ -152,7 +152,7 @@ enum Pages {
             lines.append("\(req.url.string)")
             lines.append("""
             </p>
-              <button hx-post="/auth/logout?next=/" hx-target="body" data-loading-delay class="button" data-loading-disable>
+              <button data-loading-disable class="button" data-loading-delay hx-post="/auth/logout?next=/" hx-target="body">
                 What's up?
               </button>
             </main>
