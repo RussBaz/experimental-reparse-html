@@ -1,6 +1,6 @@
 //
 // ------------------------------
-// reparse version: 0.0.7
+// reparse version: 0.0.8
 // ------------------------------
 // This is an auto-generated file
 // ------------------------------
@@ -95,8 +95,6 @@ enum Pages {
                  World?
                 """)
                 previousUnnamedIfTaken = true
-            } else {
-                previousUnnamedIfTaken = false
             }
             lines.append("""
 
@@ -104,35 +102,32 @@ enum Pages {
               <ol>
 
             """)
-            if context.isEmpty {
-                previousUnnamedIfTaken = false
-            } else {
-                for (index, item) in context.enumerated() {
-                    lines.append("""
-                    <li>
+            if context.isEmpty { previousUnnamedIfTaken = false }
+            for (index, item) in context.enumerated() {
+                lines.append("""
+                <li>
 
-                    """)
-                    attributes = SwiftAttributeStorage.from(attributes: ["class": .string("base", wrapper: .double)])
-                    attributes.append(to: "class", value: .string(" rose", wrapper: .double))
-                    lines.append("<p\(attributes)>")
-                    lines.include(Pages.Components.HelloMe.include(req: req)) { lines in
-                        lines.append("\(item)")
-                    }
-                    lines.append("""
-
-                          </p>
-                          <p>Index: 
-                    """)
-                    lines.append("\(index)")
-                    lines.append("""
-                     or +1 = 
-                    """)
-                    lines.append("\(index + 1)")
-                    lines.append("""
-                    </p>
-                        </li>
-                    """)
+                """)
+                attributes = SwiftAttributeStorage.from(attributes: ["class": .string("base", wrapper: .double)])
+                attributes.append(to: "class", value: .string(" rose", wrapper: .double))
+                lines.append("<p\(attributes)>")
+                lines.include(Pages.Components.HelloMe.include(req: req)) { lines in
+                    lines.append("\(item)")
                 }
+                lines.append("""
+
+                      </p>
+                      <p>Index: 
+                """)
+                lines.append("\(index)")
+                lines.append("""
+                 or +1 = 
+                """)
+                lines.append("\(index + 1)")
+                lines.append("""
+                </p>
+                    </li>
+                """)
                 previousUnnamedIfTaken = true
             }
             if !previousUnnamedIfTaken {
@@ -140,8 +135,6 @@ enum Pages {
                 <li>No more heroes...</li>
                 """)
                 previousUnnamedIfTaken = true
-            } else {
-                previousUnnamedIfTaken = false
             }
             lines.append("""
 
@@ -152,7 +145,7 @@ enum Pages {
             lines.append("\(req.url.string)")
             lines.append("""
             </p>
-              <button data-loading-disable class="button" data-loading-delay hx-post="/auth/logout?next=/" hx-target="body">
+              <button hx-target="body" hx-post="/auth/logout?next=/" data-loading-delay data-loading-disable class="button">
                 What's up?
               </button>
             </main>
@@ -220,8 +213,6 @@ enum Pages {
             if !previousUnnamedIfTaken {
                 attributes.append(to: "class", value: .string("red", wrapper: .double))
                 previousUnnamedIfTaken = true
-            } else {
-                previousUnnamedIfTaken = false
             }
             lines.append("<body\(attributes)>")
             lines.declare(slot: "default")

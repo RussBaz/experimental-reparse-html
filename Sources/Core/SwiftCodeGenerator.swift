@@ -56,19 +56,21 @@ public final class SwiftCodeGenerator {
             }
         }
         properties.append(at: indentation + 1) {
-            if self.properties.conditionTags.isEmpty {
-                return []
-            } else {
-                var result: [String] = []
+            guard !self.properties.conditionTags.isEmpty else { return [] }
 
-                for tag in self.properties.conditionTags {
-                    result.append("var \(tag) = false")
+            var result: [String] = []
+
+            for tag in self.properties.conditionTags {
+                if tag.read {
+                    result.append("var \(tag.name) = false")
                 }
-
-                result.append("")
-
-                return result
             }
+
+            guard !result.isEmpty else { return [] }
+
+            result.append("")
+
+            return result
         }
     }
 
@@ -160,12 +162,18 @@ public final class SwiftCodeGenerator {
                 case .ifType:
                     properties.append("if \(condition.check) {", at: indentation)
                 case .elseIfType:
+                    properties.markAsRead(condition: cn)
                     properties.append("if !\(cn), \(condition.check) {", at: indentation)
                 case .elseType:
+                    properties.markAsRead(condition: cn)
                     properties.append("if !\(cn) {", at: indentation)
                 }
 
-                properties.append("\(cn) = true", at: indentation + 1)
+                properties.append(at: indentation + 1) {
+                    guard self.properties.isRead(condition: cn) else { return [] }
+
+                    return ["\(cn) = true"]
+                }
 
                 properties.append(at: indentation + 1) {
                     let signature = self.signatures.parameters(of: name, in: self.properties.name)
@@ -196,17 +204,26 @@ public final class SwiftCodeGenerator {
             case .ifType:
                 properties.append("if \(check) {", at: indentation)
             case .elseIfType:
+                properties.markAsRead(condition: name)
                 properties.append("if !\(name), \(check) {", at: indentation)
             case .elseType:
+                properties.markAsRead(condition: name)
                 properties.append("if !\(name) {", at: indentation)
             }
 
             innerGenerator.generateBody(at: indentation + 1)
 
-            properties.append("\(name) = true", at: indentation + 1)
-            properties.append("} else {", at: indentation)
-            properties.append("\(name) = false", at: indentation + 1)
-            properties.append("}", at: indentation)
+            properties.append(at: indentation) {
+                guard self.properties.isRead(condition: name) else { return ["}"] }
+                guard type != .elseType else { return ["    \(name) = true", "}"] }
+
+                return [
+                    "    \(name) = true",
+                    "} else {",
+                    "    \(name) = false",
+                    "}",
+                ]
+            }
         case let .loop(forEvery, name, contents):
             guard !contents.isEmpty else { return }
 
@@ -214,13 +231,18 @@ public final class SwiftCodeGenerator {
             properties.append(condition: name)
             let innerGenerator = SwiftCodeGenerator(ast: contents, signatures: signatures, page: properties)
 
-            properties.append("if \(forEvery).isEmpty {", at: indentation)
-            properties.append("\(name) = false", at: indentation + 1)
-            properties.append("} else {", at: indentation)
-            properties.append("for (index, item) in \(forEvery).enumerated() {", at: indentation + 1)
-            innerGenerator.generateBody(at: indentation + 2)
-            properties.append("}", at: indentation + 1)
-            properties.append("\(name) = true", at: indentation + 1)
+            properties.append(at: indentation) {
+                guard self.properties.isRead(condition: name) else { return [] }
+
+                return ["if \(forEvery).isEmpty { \(name) = false }"]
+            }
+            properties.append("for (index, item) in \(forEvery).enumerated() {", at: indentation)
+            innerGenerator.generateBody(at: indentation + 1)
+            properties.append(at: indentation + 1) {
+                guard self.properties.isRead(condition: name) else { return [] }
+
+                return ["\(name) = true"]
+            }
             properties.append("}", at: indentation)
         case let .modifiers(applying: modifiers, tag: tag):
             guard !modifiers.isEmpty else { return }
@@ -237,15 +259,24 @@ public final class SwiftCodeGenerator {
                         case .ifType:
                             properties.append("if \(condition.check) {", at: indentation)
                         case .elseIfType:
+                            properties.markAsRead(condition: cn)
                             properties.append("if !\(cn), \(condition.check) {", at: indentation)
                         case .elseType:
+                            properties.markAsRead(condition: cn)
                             properties.append("if !\(cn) {", at: indentation)
                         }
                         properties.append("attributes.append(to: \"\(name)\", value: \(value.codeString))", at: indentation + 1)
-                        properties.append("\(cn) = true", at: indentation + 1)
-                        properties.append("} else {", at: indentation)
-                        properties.append("\(cn) = false", at: indentation + 1)
-                        properties.append("}", at: indentation)
+                        properties.append(at: indentation) {
+                            guard self.properties.isRead(condition: cn) else { return ["}"] }
+                            guard condition.type != .elseType else { return ["    \(cn) = true", "}"] }
+
+                            return [
+                                "    \(cn) = true",
+                                "} else {",
+                                "    \(cn) = false",
+                                "}",
+                            ]
+                        }
                     } else {
                         properties.append("attributes.append(to: \"\(name)\", value: \(value.codeString))", at: indentation)
                     }
@@ -257,15 +288,24 @@ public final class SwiftCodeGenerator {
                         case .ifType:
                             properties.append("if \(condition.check) {", at: indentation)
                         case .elseIfType:
+                            properties.markAsRead(condition: cn)
                             properties.append("if !\(cn), \(condition.check) {", at: indentation)
                         case .elseType:
+                            properties.markAsRead(condition: cn)
                             properties.append("if !\(cn) {", at: indentation)
                         }
                         properties.append("attributes.replace(key: \"\(name)\", with: \(value.codeString))", at: indentation + 1)
-                        properties.append("\(cn) = true", at: indentation + 1)
-                        properties.append("} else {", at: indentation)
-                        properties.append("\(cn) = false", at: indentation + 1)
-                        properties.append("}", at: indentation)
+                        properties.append(at: indentation) {
+                            guard self.properties.isRead(condition: cn) else { return ["}"] }
+                            guard condition.type != .elseType else { return ["    \(cn) = true", "}"] }
+
+                            return [
+                                "    \(cn) = true",
+                                "} else {",
+                                "    \(cn) = false",
+                                "}",
+                            ]
+                        }
                     } else {
                         properties.append("attributes.replace(key: \"\(name)\", with: \(value.codeString))", at: indentation)
                     }
@@ -277,13 +317,24 @@ public final class SwiftCodeGenerator {
                         case .ifType:
                             properties.append("if \(condition.check) {", at: indentation)
                         case .elseIfType:
+                            properties.markAsRead(condition: cn)
                             properties.append("if !\(cn), \(condition.check) {", at: indentation)
                         case .elseType:
+                            properties.markAsRead(condition: cn)
                             properties.append("if !\(cn) {", at: indentation)
                         }
                         properties.append("attributes.remove(\"\(name)\")", at: indentation + 1)
-                        properties.append("\(cn) = true", at: indentation + 1)
-                        properties.append("}", at: indentation)
+                        properties.append(at: indentation) {
+                            guard self.properties.isRead(condition: cn) else { return ["}"] }
+                            guard condition.type != .elseType else { return ["    \(cn) = true", "}"] }
+
+                            return [
+                                "    \(cn) = true",
+                                "} else {",
+                                "    \(cn) = false",
+                                "}",
+                            ]
+                        }
                     } else {
                         properties.append("attributes.remove(\"\(name)\")", at: indentation)
                     }
@@ -310,7 +361,7 @@ public final class SwiftCodeGenerator {
             properties.append(at: indentation) {
                 if let _ = self.properties.defaultValues[name] {
                     ["lines.append(\"\\(\(name))\")"]
-                } else if self.properties.conditionTags.contains(name) {
+                } else if self.properties.markAsRead(condition: name) {
                     ["lines.append(\"\\(\(name))\")"]
                 } else if let defaultValue {
                     ["lines.append(\"\\(\(name) ?? \"\(defaultValue)\")\")"]

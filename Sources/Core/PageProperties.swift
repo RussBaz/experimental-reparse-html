@@ -19,7 +19,7 @@ public final class PageProperties {
     let fileExtension: String
     let enumName: String
     var lines: [LineDef] = []
-    var conditionTags: [String] = []
+    var conditionTags: [(name: String, read: Bool)] = []
     var defaultValues: [String: String] = [:]
     var mutableParameters: [String] = []
     var modifiersPresent = false
@@ -51,6 +51,7 @@ public final class PageProperties {
         lines.append(.init(indentation: indentation, line: .text(text)))
     }
 
+    /// Use this function when the conditions are not yet known and knowing them will require a global resolution first
     func append(at indentation: Int, deferred: @escaping () -> [String]) {
         lines.append(.init(indentation: indentation, line: .deferred(deferred)))
     }
@@ -59,6 +60,7 @@ public final class PageProperties {
         lines.insert(.init(indentation: indentation, line: .text(text)), at: 0)
     }
 
+    /// Use this function when the conditions are not yet known and knowing them will require a global resolution first
     func prepend(at indentation: Int, deferred: @escaping () -> [String]) {
         lines.insert(.init(indentation: indentation, line: .deferred(deferred)), at: 0)
     }
@@ -72,8 +74,8 @@ public final class PageProperties {
     }
 
     func append(condition tag: String) {
-        if !conditionTags.contains(tag) {
-            conditionTags.append(tag)
+        if !conditionTags.contains(where: { $0.name == tag }) {
+            conditionTags.append((name: tag, read: false))
         }
     }
 
@@ -85,6 +87,23 @@ public final class PageProperties {
         guard !mutableParameters.contains(name) else { return }
 
         mutableParameters.append(name)
+    }
+
+    @discardableResult
+    func markAsRead(condition name: String) -> Bool {
+        for (i, c) in conditionTags.enumerated() {
+            guard c.name == name else { continue }
+            conditionTags[i] = (name: name, read: true)
+            return true
+        }
+
+        return false
+    }
+
+    func isRead(condition name: String) -> Bool {
+        guard let item = conditionTags.first(where: { $0.name == name }) else { return false }
+
+        return item.read
     }
 
     func asText(at indenation: Int = 0) -> String {
