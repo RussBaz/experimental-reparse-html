@@ -356,7 +356,7 @@ public final class SwiftCodeGenerator {
                 properties.appendMutable(name: name)
             }
         case let .eval(line):
-            properties.append("lines.append(\"\\(\(line.trimmingCharacters(in: .whitespacesAndNewlines)))\")", at: indentation)
+            properties.append(line.trimmingCharacters(in: .whitespacesAndNewlines), at: indentation)
         case let .value(of: name, defaultValue):
             properties.append(at: indentation) {
                 if let _ = self.properties.defaultValues[name] {

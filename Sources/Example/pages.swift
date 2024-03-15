@@ -74,15 +74,20 @@ enum Pages {
 
 
             <main>
-              <h1>
-                Hello
+
+            """)
+            req.logger.info("Index Debug Message")
+            lines.append("""
+
+                <h1>
+                    Hello
 
             """)
             if !context.isEmpty {
                 lines.include(Pages.Components.World.include(req: req)) { lines in
                     lines.append("""
 
-                          Ultra Heroes!
+                                Ultra Heroes!
 
                     """)
                 }
@@ -98,8 +103,8 @@ enum Pages {
             }
             lines.append("""
 
-              </h1>
-              <ol>
+                </h1>
+                <ol>
 
             """)
             if context.isEmpty { previousUnnamedIfTaken = false }
@@ -116,17 +121,13 @@ enum Pages {
                 }
                 lines.append("""
 
-                      </p>
-                      <p>Index: 
+                            </p>
+                            <p>Index: 
                 """)
                 lines.append("\(index)")
                 lines.append("""
-                 or +1 = 
-                """)
-                lines.append("\(index + 1)")
-                lines.append("""
-                </p>
-                    </li>
+                 or +1 = \(index + 1)</p>
+                        </li>
                 """)
                 previousUnnamedIfTaken = true
             }
@@ -138,16 +139,16 @@ enum Pages {
             }
             lines.append("""
 
-              </ol>
+                </ol>
 
-              <p>
+                <p>
             """)
             lines.append("\(req.url.string)")
             lines.append("""
             </p>
-              <button hx-target="body" hx-post="/auth/logout?next=/" data-loading-delay data-loading-disable class="button">
-                What's up?
-              </button>
+                <button data-loading-disable class="button" data-loading-delay hx-target="body" hx-post="/auth/logout?next=/">
+                    What's up?
+                </button>
             </main>
             """)
             lines.add(slot: "head") { lines in
