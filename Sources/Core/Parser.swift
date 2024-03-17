@@ -147,56 +147,6 @@ extension Parser {
 }
 
 extension Parser {
-    func openTag(_ tag: AST.TagType, at depth: Int) {
-        guard let _ = ast.getCurrentBranch() else { return }
-
-        if let controlAttrs = ControlAttrs.new(from: tag) {
-            if let conditional = isConditional(controlAttrs), let branch = ast.getCurrentBranch() {
-                closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
-                branch.append(node: conditional)
-            }
-
-            if let loop = isLoop(controlAttrs), let branch = ast.getCurrentBranch() {
-                closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
-                branch.append(node: loop)
-            }
-
-            if let slotControl = isSlotCommand(controlAttrs), let branch = ast.getCurrentBranch() {
-                closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
-                branch.append(node: slotControl)
-            }
-        }
-
-        switch tag.name {
-        case "r-include":
-            openIncludeTag(tag, at: depth)
-        case "r-extend":
-            openExtendTag(tag, at: depth)
-        case "r-require":
-            openRequireTag(tag, at: depth)
-        case "r-set":
-            openSetTag(tag, at: depth)
-        case "r-unset":
-            openUnsetTag(tag, at: depth)
-        case "r-var":
-            openVarTag(tag, at: depth)
-        case "r-value":
-            openValueTag(tag, at: depth)
-        case "r-eval":
-            openEvalTag(tag, at: depth)
-        case "r-slot":
-            openSlotTag(tag, at: depth)
-        case "r-block":
-            openBlockTag(tag, at: depth)
-        case "r-index":
-            openIndexTag(tag, at: depth)
-        case "r-item":
-            openItemTag(tag, at: depth)
-        default:
-            openConstantTag(tag, at: depth)
-        }
-    }
-
     func append(eval content: AST.Content) {
         guard let branch = ast.getCurrentBranch() else { return }
         guard let last = branch.popLast() else { return }
@@ -234,6 +184,66 @@ extension Parser {
             openTag(tag, at: depth)
         case .closingTag:
             closeTag(tag, at: depth)
+        }
+    }
+
+    func openTag(_ tag: AST.TagType, at depth: Int) {
+        guard let _ = ast.getCurrentBranch() else { return }
+        var close = 0
+
+        if let controlAttrs = ControlAttrs.new(from: tag) {
+            if let conditional = isConditional(controlAttrs), let branch = ast.getCurrentBranch() {
+                closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
+                branch.append(node: conditional)
+                close += 1
+            }
+
+            if let loop = isLoop(controlAttrs), let branch = ast.getCurrentBranch() {
+                closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
+                branch.append(node: loop)
+                close += 1
+            }
+
+            if let slotControl = isSlotCommand(controlAttrs), let branch = ast.getCurrentBranch() {
+                closeDepth[depth] = (closeDepth[depth] ?? 0) + 1
+                branch.append(node: slotControl)
+                close += 1
+            }
+        }
+
+        switch tag.name {
+        case "r-include":
+            openIncludeTag(tag, at: depth)
+        case "r-extend":
+            openExtendTag(tag, at: depth)
+        case "r-require":
+            openRequireTag(tag, at: depth)
+        case "r-set":
+            openSetTag(tag, at: depth)
+        case "r-unset":
+            openUnsetTag(tag, at: depth)
+        case "r-var":
+            openVarTag(tag, at: depth)
+        case "r-value":
+            openValueTag(tag, at: depth)
+        case "r-eval":
+            openEvalTag(tag, at: depth)
+        case "r-slot":
+            openSlotTag(tag, at: depth)
+        case "r-block":
+            openBlockTag(tag, at: depth)
+        case "r-index":
+            openIndexTag(tag, at: depth)
+        case "r-item":
+            openItemTag(tag, at: depth)
+        default:
+            openConstantTag(tag, at: depth)
+        }
+
+        if tag.isVoid {
+            for i in (0 ..< close).reversed() {
+                closeInnerASTs(for: depth + i)
+            }
         }
     }
 

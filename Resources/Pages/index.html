@@ -1,6 +1,11 @@
 <r-require name="context" type="[String]" label="superheroes" />
 <r-extend name="base" />
-<r-extend name="body" />
+<r-extend name="body" r-if="context.isEmpty" />
+<r-block r-else-if="context.count < 3">
+    <r-eval line='print("debug 0")' />
+    <r-eval line='print("debug 1")' />
+</r-block>
+<r-eval line='print("debug 2")' r-else />
 
 <main>
     <r-eval line='req.logger.info("Index Debug Message")' />
@@ -22,7 +27,7 @@
         <li r-else>No more heroes...</li>
     </ol>
 
-    <p><r-value of="req.url.string" /></p>
+    <p><r-value of="req.url.string" /> <r-block r-if="context.isEmpty">empty</r-block><r-value of="context.count" r-else /></p>
     <button
         class="button"
         hx-post="/auth/logout?next=/"

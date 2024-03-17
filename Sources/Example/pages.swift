@@ -69,9 +69,22 @@ enum Pages {
             var previousUnnamedIfTaken = false
 
             lines.extend(Pages.Base.include(req: req))
-            lines.extend(Pages.Body.include(req: req, value: value))
+            if context.isEmpty {
+                previousUnnamedIfTaken = true
+                lines.extend(Pages.Body.include(req: req, value: value))
+            }
+            if !previousUnnamedIfTaken, context.count < 3 {
+                print("debug 0")
+                print("debug 1")
+                previousUnnamedIfTaken = true
+            } else {
+                previousUnnamedIfTaken = false
+            }
+            if !previousUnnamedIfTaken {
+                print("debug 2")
+                previousUnnamedIfTaken = true
+            }
             lines.append("""
-
 
             <main>
 
@@ -144,9 +157,21 @@ enum Pages {
                 <p>
             """)
             lines.append("\(req.url.string)")
+            if context.isEmpty {
+                lines.append("""
+                empty
+                """)
+                previousUnnamedIfTaken = true
+            } else {
+                previousUnnamedIfTaken = false
+            }
+            if !previousUnnamedIfTaken {
+                lines.append("\(context.count)")
+                previousUnnamedIfTaken = true
+            }
             lines.append("""
             </p>
-                <button data-loading-disable class="button" data-loading-delay hx-target="body" hx-post="/auth/logout?next=/">
+                <button data-loading-disable hx-target="body" data-loading-delay hx-post="/auth/logout?next=/" class="button">
                     What's up?
                 </button>
             </main>
