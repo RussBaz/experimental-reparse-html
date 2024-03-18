@@ -1,6 +1,6 @@
 //
 // ------------------------------
-// reparse version: 0.0.8
+// reparse version: 0.0.11
 // ------------------------------
 // This is an auto-generated file
 // ------------------------------
@@ -77,12 +77,9 @@ enum Pages {
                 print("debug 0")
                 print("debug 1")
                 previousUnnamedIfTaken = true
-            } else {
-                previousUnnamedIfTaken = false
             }
             if !previousUnnamedIfTaken {
                 print("debug 2")
-                previousUnnamedIfTaken = true
             }
             lines.append("""
 
@@ -105,14 +102,16 @@ enum Pages {
                     """)
                 }
                 previousUnnamedIfTaken = true
-            } else {
-                previousUnnamedIfTaken = false
             }
             if !previousUnnamedIfTaken {
                 lines.append("""
                  World?
                 """)
-                previousUnnamedIfTaken = true
+            }
+            if !previousUnnamedIfTaken {
+                lines.append("""
+                <span>_!_</span>
+                """)
             }
             lines.append("""
 
@@ -148,7 +147,6 @@ enum Pages {
                 lines.append("""
                 <li>No more heroes...</li>
                 """)
-                previousUnnamedIfTaken = true
             }
             lines.append("""
 
@@ -162,16 +160,13 @@ enum Pages {
                 empty
                 """)
                 previousUnnamedIfTaken = true
-            } else {
-                previousUnnamedIfTaken = false
             }
             if !previousUnnamedIfTaken {
                 lines.append("\(context.count)")
-                previousUnnamedIfTaken = true
             }
             lines.append("""
             </p>
-                <button data-loading-disable hx-target="body" data-loading-delay hx-post="/auth/logout?next=/" class="button">
+                <button hx-target="body" hx-post="/auth/logout?next=/" class="button" data-loading-delay data-loading-disable>
                     What's up?
                 </button>
             </main>
@@ -233,12 +228,9 @@ enum Pages {
             if value {
                 attributes.append(to: "class", value: .string("blue", wrapper: .double))
                 previousUnnamedIfTaken = true
-            } else {
-                previousUnnamedIfTaken = false
             }
             if !previousUnnamedIfTaken {
                 attributes.append(to: "class", value: .string("red", wrapper: .double))
-                previousUnnamedIfTaken = true
             }
             lines.append("<body\(attributes)>")
             lines.declare(slot: "default")

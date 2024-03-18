@@ -215,12 +215,10 @@ public final class SwiftCodeGenerator {
 
             properties.append(at: indentation) {
                 guard self.properties.isRead(condition: name) else { return ["}"] }
-                guard type != .elseType else { return ["    \(name) = true", "}"] }
+                guard type != .elseType else { return ["}"] }
 
                 return [
                     "    \(name) = true",
-                    "} else {",
-                    "    \(name) = false",
                     "}",
                 ]
             }
@@ -268,12 +266,10 @@ public final class SwiftCodeGenerator {
                         properties.append("attributes.append(to: \"\(name)\", value: \(value.codeString))", at: indentation + 1)
                         properties.append(at: indentation) {
                             guard self.properties.isRead(condition: cn) else { return ["}"] }
-                            guard condition.type != .elseType else { return ["    \(cn) = true", "}"] }
+                            guard condition.type != .elseType else { return ["}"] }
 
                             return [
                                 "    \(cn) = true",
-                                "} else {",
-                                "    \(cn) = false",
                                 "}",
                             ]
                         }
@@ -297,12 +293,10 @@ public final class SwiftCodeGenerator {
                         properties.append("attributes.replace(key: \"\(name)\", with: \(value.codeString))", at: indentation + 1)
                         properties.append(at: indentation) {
                             guard self.properties.isRead(condition: cn) else { return ["}"] }
-                            guard condition.type != .elseType else { return ["    \(cn) = true", "}"] }
+                            guard condition.type != .elseType else { return ["}"] }
 
                             return [
                                 "    \(cn) = true",
-                                "} else {",
-                                "    \(cn) = false",
                                 "}",
                             ]
                         }
@@ -326,12 +320,10 @@ public final class SwiftCodeGenerator {
                         properties.append("attributes.remove(\"\(name)\")", at: indentation + 1)
                         properties.append(at: indentation) {
                             guard self.properties.isRead(condition: cn) else { return ["}"] }
-                            guard condition.type != .elseType else { return ["    \(cn) = true", "}"] }
+                            guard condition.type != .elseType else { return ["}"] }
 
                             return [
                                 "    \(cn) = true",
-                                "} else {",
-                                "    \(cn) = false",
                                 "}",
                             ]
                         }
