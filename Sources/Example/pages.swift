@@ -1,6 +1,6 @@
 //
 // ------------------------------
-// reparse version: 0.0.11
+// reparse version: 0.0.12
 // ------------------------------
 // This is an auto-generated file
 // ------------------------------
@@ -70,8 +70,10 @@ enum Pages {
 
             lines.extend(Pages.Base.include(req: req))
             if context.isEmpty {
-                previousUnnamedIfTaken = true
                 lines.extend(Pages.Body.include(req: req, value: value))
+                previousUnnamedIfTaken = true
+            } else {
+                previousUnnamedIfTaken = false
             }
             if !previousUnnamedIfTaken, context.count < 3 {
                 print("debug 0")
@@ -102,6 +104,8 @@ enum Pages {
                     """)
                 }
                 previousUnnamedIfTaken = true
+            } else {
+                previousUnnamedIfTaken = false
             }
             if !previousUnnamedIfTaken {
                 lines.append("""
@@ -160,13 +164,15 @@ enum Pages {
                 empty
                 """)
                 previousUnnamedIfTaken = true
+            } else {
+                previousUnnamedIfTaken = false
             }
             if !previousUnnamedIfTaken {
                 lines.append("\(context.count)")
             }
             lines.append("""
             </p>
-                <button hx-target="body" hx-post="/auth/logout?next=/" class="button" data-loading-delay data-loading-disable>
+                <button class="button" hx-target="body" data-loading-delay data-loading-disable hx-post="/auth/logout?next=/">
                     What's up?
                 </button>
             </main>
@@ -228,6 +234,8 @@ enum Pages {
             if value {
                 attributes.append(to: "class", value: .string("blue", wrapper: .double))
                 previousUnnamedIfTaken = true
+            } else {
+                previousUnnamedIfTaken = false
             }
             if !previousUnnamedIfTaken {
                 attributes.append(to: "class", value: .string("red", wrapper: .double))
