@@ -186,6 +186,8 @@ public final class SimpleHtmlParser {
                 } else {
                     state = .lookingForAttributeValue(tag: tag, attributes: attributes, key: key, value: value + String(char), wrapper: wrapper)
                 }
+            } else if char == "\n", wrapper != .none {
+                state = .lookingForAttributeValue(tag: tag, attributes: attributes, key: key, value: value + String(" "), wrapper: wrapper)
             } else if char == "\"" {
                 switch wrapper {
                 case .single:

@@ -276,7 +276,7 @@ enum Pages {
             }
             lines.append("""
             </p>
-                <button class="button" hx-post="/auth/logout?next=/" hx-target="body" data-loading-delay data-loading-disable>
+                <button class="button" hx-post="/auth/logout?next=/" hx-target="body" onfocus="console.log('?'); console.log('This is drastic?');         console.log('too many');" data-loading-delay data-loading-disable>
                     What's up?
                 </button>
             </main>
