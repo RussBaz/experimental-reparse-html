@@ -80,12 +80,12 @@ public final class SwiftOutputBuilder {
         \(String(repeating: "    ", count: indentation))enum \(name) {
         """
 
-        let children = children.map { _, value in
-            value.build()
-        }
-        .joined(separator: "\n\n")
+        let children = children.keys.sorted()
+            .compactMap { self.children[$0] }
+            .map { $0.build() }
+            .joined(separator: "\n\n")
 
-        let renderers = pages.map { p in
+        let renderers = pages.sorted(by: { $0.name < $1.name }).map { p in
             buildPageEnum(for: p, at: indentation + 1)
         }
         .joined(separator: "\n\n")
@@ -94,15 +94,23 @@ public final class SwiftOutputBuilder {
         \(String(repeating: "    ", count: indentation))}
         """
 
+        let markNestedPages = """
+        \(String(repeating: "    ", count: indentation + 1))// Nested pages
+        """
+
+        let markOwnPages = """
+        \(String(repeating: "    ", count: indentation + 1))// Own pages
+        """
+
         return switch (children.isEmpty, renderers.isEmpty) {
         case (true, true):
             [header, footer].joined(separator: "\n")
         case (true, false):
-            [header, renderers, footer].joined(separator: "\n")
+            [header, markOwnPages, renderers, footer].joined(separator: "\n")
         case (false, true):
-            [header, children, footer].joined(separator: "\n")
+            [header, markNestedPages, children, footer].joined(separator: "\n")
         case (false, false):
-            [header, children, "", renderers, footer].joined(separator: "\n")
+            [header, markNestedPages, children, "", markOwnPages, renderers, footer].joined(separator: "\n")
         }
     }
 

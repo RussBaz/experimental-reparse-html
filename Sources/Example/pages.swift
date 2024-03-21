@@ -10,7 +10,50 @@ import ReparseRuntime
 import Vapor
 
 enum Pages {
+    // Nested pages
     enum Components {
+        // Nested pages
+        enum Special {
+            // Own pages
+            enum Hi {
+                // Template: ./Components/Special/hi.html
+                static func render(req: Request) -> String {
+                    include(req: req).render()
+                }
+
+                static func include(req _: Request) -> SwiftLineStorage {
+                    let lines = SwiftLineStorage()
+                    lines.append("""
+                    <span>Hi!</span>
+                    """)
+
+                    return lines
+                }
+            }
+        }
+
+        // Own pages
+        enum HelloMe {
+            // Template: ./Components/hello-me.html
+            static func render(req: Request) -> String {
+                include(req: req).render()
+            }
+
+            static func include(req _: Request) -> SwiftLineStorage {
+                let lines = SwiftLineStorage()
+                lines.append("""
+                Hello, 
+                """)
+                lines.declare(slot: "default") { lines in
+                    lines.append("""
+                    Friend!
+                    """)
+                }
+
+                return lines
+            }
+        }
+
         enum World {
             // Template: ./Components/world.html
             static func render(req: Request) -> String {
@@ -34,26 +77,87 @@ enum Pages {
                 return lines
             }
         }
+    }
 
-        enum HelloMe {
-            // Template: ./Components/hello-me.html
+    enum Layouts {
+        // Own pages
+        enum Shared {
+            // Template: ./Layouts/shared.html
             static func render(req: Request) -> String {
                 include(req: req).render()
             }
 
             static func include(req _: Request) -> SwiftLineStorage {
                 let lines = SwiftLineStorage()
-                lines.append("""
-                Hello, 
-                """)
-                lines.declare(slot: "default") { lines in
-                    lines.append("""
-                    Friend!
-                    """)
-                }
+                lines.declare(slot: "default")
 
                 return lines
             }
+        }
+    }
+
+    // Own pages
+    enum Base {
+        // Template: ./base.html
+        static func render(req: Request) -> String {
+            include(req: req).render()
+        }
+
+        static func include(req _: Request) -> SwiftLineStorage {
+            let lines = SwiftLineStorage()
+            lines.append("""
+            <!DOCTYPE html>
+            <html lang="en">
+                <head>
+                    <meta charset="utf-8"/>
+
+            """)
+            lines.declare(slot: "head")
+            lines.append("""
+
+                </head>
+
+
+            """)
+            lines.declare(slot: "default")
+            lines.append("""
+
+            </html>
+            """)
+
+            return lines
+        }
+    }
+
+    enum Body {
+        // Template: ./body.html
+        static func render(req: Request, value: Bool = false) -> String {
+            include(req: req, value: value).render()
+        }
+
+        static func include(req _: Request, value: Bool = false) -> SwiftLineStorage {
+            let lines = SwiftLineStorage()
+            var attributes: SwiftAttributeStorage
+            var previousUnnamedIfTaken = false
+
+            attributes = SwiftAttributeStorage.from(attributes: [:])
+            if value {
+                attributes.append(to: "class", value: .string("blue", wrapper: .double))
+                previousUnnamedIfTaken = true
+            } else {
+                previousUnnamedIfTaken = false
+            }
+            if !previousUnnamedIfTaken {
+                attributes.append(to: "class", value: .string("red", wrapper: .double))
+            }
+            lines.append("<body\(attributes)>")
+            lines.declare(slot: "default")
+            lines.append("""
+
+            </body>
+            """)
+
+            return lines
         }
     }
 
@@ -172,7 +276,7 @@ enum Pages {
             }
             lines.append("""
             </p>
-                <button class="button" hx-target="body" data-loading-delay data-loading-disable hx-post="/auth/logout?next=/">
+                <button class="button" hx-post="/auth/logout?next=/" hx-target="body" data-loading-delay data-loading-disable>
                     What's up?
                 </button>
             </main>
@@ -182,70 +286,6 @@ enum Pages {
                 <title>Hero List</title>
                 """)
             }
-
-            return lines
-        }
-    }
-
-    enum Base {
-        // Template: ./base.html
-        static func render(req: Request) -> String {
-            include(req: req).render()
-        }
-
-        static func include(req _: Request) -> SwiftLineStorage {
-            let lines = SwiftLineStorage()
-            lines.append("""
-            <!DOCTYPE html>
-            <html lang="en">
-                <head>
-                    <meta charset="utf-8"/>
-
-            """)
-            lines.declare(slot: "head")
-            lines.append("""
-
-                </head>
-
-
-            """)
-            lines.declare(slot: "default")
-            lines.append("""
-
-            </html>
-            """)
-
-            return lines
-        }
-    }
-
-    enum Body {
-        // Template: ./body.html
-        static func render(req: Request, value: Bool = false) -> String {
-            include(req: req, value: value).render()
-        }
-
-        static func include(req _: Request, value: Bool = false) -> SwiftLineStorage {
-            let lines = SwiftLineStorage()
-            var attributes: SwiftAttributeStorage
-            var previousUnnamedIfTaken = false
-
-            attributes = SwiftAttributeStorage.from(attributes: [:])
-            if value {
-                attributes.append(to: "class", value: .string("blue", wrapper: .double))
-                previousUnnamedIfTaken = true
-            } else {
-                previousUnnamedIfTaken = false
-            }
-            if !previousUnnamedIfTaken {
-                attributes.append(to: "class", value: .string("red", wrapper: .double))
-            }
-            lines.append("<body\(attributes)>")
-            lines.declare(slot: "default")
-            lines.append("""
-
-            </body>
-            """)
 
             return lines
         }

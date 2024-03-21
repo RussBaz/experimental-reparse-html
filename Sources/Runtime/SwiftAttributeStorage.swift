@@ -88,7 +88,7 @@ public final class SwiftAttributeStorage {
 
     public var codeString: String {
         var lines: [String] = []
-        for (key, value) in attributes {
+        for (key, value) in attributes.sortedAttributes() {
             switch value {
             case .flag:
                 lines.append("\"\(key)\": .flag")
@@ -115,7 +115,7 @@ public final class SwiftAttributeStorage {
 extension SwiftAttributeStorage: CustomStringConvertible {
     public var description: String {
         var result = ""
-        for (key, attribute) in attributes {
+        for (key, attribute) in attributes.sortedAttributes() {
             switch attribute {
             case .flag:
                 result += " \(key)"
@@ -204,5 +204,27 @@ extension SwiftAttributeStorage {
         }
 
         return storage
+    }
+}
+
+public extension [String: SwiftAttributeStorage.AttributeValue] {
+    func sortedAttributes() -> [(key: String, value: SwiftAttributeStorage.AttributeValue)] {
+        var withValues: [(key: String, value: SwiftAttributeStorage.AttributeValue)] = []
+        var withFlags: [(key: String, value: SwiftAttributeStorage.AttributeValue)] = []
+
+        for (key, value) in self {
+            switch value {
+            case .flag:
+                withFlags.append((key: key, value: value))
+            case let .string(v, _):
+                if v.isEmpty {
+                    withFlags.append((key: key, value: .flag))
+                } else {
+                    withValues.append((key: key, value: value))
+                }
+            }
+        }
+
+        return withValues.sorted(by: { $0.key < $1.key }) + withFlags.sorted(by: { $0.key < $1.key })
     }
 }
