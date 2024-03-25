@@ -1,6 +1,6 @@
 //
 // ------------------------------
-// reparse version: 0.0.12
+// reparse version: 0.0.13
 // ------------------------------
 // This is an auto-generated file
 // ------------------------------
@@ -276,7 +276,18 @@ enum Pages {
             }
             lines.append("""
             </p>
-                <button class="button" hx-post="/auth/logout?next=/" hx-target="body" onfocus="console.log('?'); console.log('This is drastic?');         console.log('too many');" data-loading-delay data-loading-disable>
+
+            """)
+            attributes = SwiftAttributeStorage.from(attributes: ["class": .string("button", wrapper: .double), "hx-post": .string("/auth/logout?next=/", wrapper: .double), "hx-target": .string("body", wrapper: .double), "onfocus": .string("console.log('?'); console.log('This is drastic?');         console.log('too many');", wrapper: .double), "data-loading-delay": .flag, "data-loading-disable": .flag])
+            if !context.isEmpty {
+                attributes.replace(key: "disabled", with: .flag)
+                previousUnnamedIfTaken = true
+            } else {
+                previousUnnamedIfTaken = false
+            }
+            lines.append("<button\(attributes)>")
+            lines.append("""
+
                     What's up?
                 </button>
             </main>

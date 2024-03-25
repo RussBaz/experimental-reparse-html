@@ -408,7 +408,7 @@ extension Parser {
         guard tag.isVoid else { ignoringUntilDepth = depth; return }
         guard let attributes = tag.attributes else { return }
         guard let name = attributes.find("name") else { return }
-        guard let attributeValue = attributes["value"] else { return }
+        let attributeValue = attributes["value"] ?? .flag
 
         let appending = if attributes.has("append") { true } else { false }
 
