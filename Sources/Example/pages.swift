@@ -282,9 +282,13 @@ enum Pages {
                 </p>
 
             """)
-            attributes = SwiftAttributeStorage.from(attributes: ["class": .string("button", wrapper: .double), "hx-post": .string("/auth/logout?next=/", wrapper: .double), "hx-target": .string("body", wrapper: .double), "hx-vals": .string("{\"key\": \"\(key)\"}", wrapper: .single), "on-click": .string("console.log('?')", wrapper: .double), "onfocus": .string("console.log('?'); console.log('This is drastic?');         console.log('too many');", wrapper: .double), "data-loading-delay": .flag, "data-loading-disable": .flag])
+            attributes = SwiftAttributeStorage.from(attributes: ["class": .string("button", wrapper: .double), "disabled": .string("""
+            \(context.count < 6 ? "true" : "false")
+            """, wrapper: .single), "hx-post": .string("/auth/logout?next=/", wrapper: .double), "hx-target": .string("body", wrapper: .double), "hx-vals": .string("""
+            {"key": "\(key)"}
+            """, wrapper: .single), "onclick": .string("console.log('?')", wrapper: .double), "onfocus": .string("console.log('?'); console.log('This is drastic?');         console.log('too many');", wrapper: .double), "data-loading-delay": .flag, "data-loading-disable": .flag])
             if !context.isEmpty {
-                attributes.replace(key: "disabled", with: .flag)
+                attributes.replace(key: "requried", with: .flag)
                 previousUnnamedIfTaken = true
             } else {
                 previousUnnamedIfTaken = false
