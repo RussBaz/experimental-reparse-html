@@ -6,6 +6,7 @@
     <r-eval line='print("debug 1")' />
 </r-block>
 <r-eval line='print("debug 2")' r-else />
+<r-eval> let key = "1984" </r-eval>
 
 <main>
     <r-eval line='req.logger.info("Index Debug Message")' />
@@ -28,13 +29,19 @@
         <li r-else>No more heroes...</li>
     </ol>
 
-    <p><r-value of="req.url.string" /> <r-block r-if="context.isEmpty">empty</r-block><r-value of="context.count" r-else /></p>
+    <p>
+        <r-value of="req.url.string" />
+        <r-block r-if="context.isEmpty">empty</r-block>
+        <r-value of="context.count" r-else />
+    </p>
     <button
         class="button"
         hx-post="/auth/logout?next=/"
         hx-target="body"
         data-loading-delay
         data-loading-disable
+        hx-vals='{"key": "\(key)"}'
+        on-click="console.log('?')"
         onfocus="console.log('?');
 console.log('This is drastic?');
         console.log('too many');"

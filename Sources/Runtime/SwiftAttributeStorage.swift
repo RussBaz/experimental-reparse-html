@@ -95,11 +95,11 @@ public final class SwiftAttributeStorage {
             case let .string(v, wrapper):
                 switch wrapper {
                 case .single:
-                    lines.append("\"\(key)\": .string(\"\(v)\", wrapper: .single)")
+                    lines.append("\"\(key)\": .string(\"\(v.replacing("\"", with: "\\\""))\", wrapper: .single)")
                 case .double:
-                    lines.append("\"\(key)\": .string(\"\(v)\", wrapper: .double)")
+                    lines.append("\"\(key)\": .string(\"\(v.replacing("\"", with: "\\\""))\", wrapper: .double)")
                 case .none:
-                    lines.append("\"\(key)\": .string(\"\(v)\", wrapper: .none)")
+                    lines.append("\"\(key)\": .string(\"\(v.replacing("\"", with: "\\\""))\", wrapper: .none)")
                 }
             }
         }
@@ -149,11 +149,11 @@ public extension SwiftAttributeStorage.AttributeValue {
         case let .string(string, wrapper):
             switch wrapper {
             case .single:
-                ".string(\"\(string)\", wrapper: .single)"
+                ".string(\"\(string.replacing("\"", with: "\\\""))\", wrapper: .single)"
             case .double:
-                ".string(\"\(string)\", wrapper: .double)"
+                ".string(\"\(string.replacing("\"", with: "\\\""))\", wrapper: .double)"
             case .none:
-                ".string(\"\(string)\", wrapper: .none)"
+                ".string(\"\(string.replacing("\"", with: "\\\""))\", wrapper: .none)"
             }
         }
     }

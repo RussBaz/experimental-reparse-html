@@ -187,7 +187,9 @@ enum Pages {
             if !previousUnnamedIfTaken {
                 print("debug 2")
             }
+            let key = "1984"
             lines.append("""
+
 
             <main>
 
@@ -261,6 +263,7 @@ enum Pages {
                 </ol>
 
                 <p>
+
             """)
             lines.append("\(req.url.string)")
             if context.isEmpty {
@@ -275,10 +278,11 @@ enum Pages {
                 lines.append("\(context.count)")
             }
             lines.append("""
-            </p>
+
+                </p>
 
             """)
-            attributes = SwiftAttributeStorage.from(attributes: ["class": .string("button", wrapper: .double), "hx-post": .string("/auth/logout?next=/", wrapper: .double), "hx-target": .string("body", wrapper: .double), "onfocus": .string("console.log('?'); console.log('This is drastic?');         console.log('too many');", wrapper: .double), "data-loading-delay": .flag, "data-loading-disable": .flag])
+            attributes = SwiftAttributeStorage.from(attributes: ["class": .string("button", wrapper: .double), "hx-post": .string("/auth/logout?next=/", wrapper: .double), "hx-target": .string("body", wrapper: .double), "hx-vals": .string("{\"key\": \"\(key)\"}", wrapper: .single), "on-click": .string("console.log('?')", wrapper: .double), "onfocus": .string("console.log('?'); console.log('This is drastic?');         console.log('too many');", wrapper: .double), "data-loading-delay": .flag, "data-loading-disable": .flag])
             if !context.isEmpty {
                 attributes.replace(key: "disabled", with: .flag)
                 previousUnnamedIfTaken = true
