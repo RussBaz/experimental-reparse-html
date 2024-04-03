@@ -27,7 +27,7 @@ Here is an example of the `Reparse` syntax as used in the bundled `Example` proj
         <r-block r-else> World?</r-block>
     </h1>
     <ol>
-        <li r-for-every="context" r-with-name r-with-index>
+        <li r-for-every="context" r-with-item r-with-index>
             <p>
                 <r-include name="components.hello-me">\(item)</r-include>
             </p>
@@ -49,7 +49,7 @@ Here is an example of the `Reparse` syntax as used in the bundled `Example` proj
 If you would like to use it in your own project, firstly, add it to your package dependencies like this:
 
 ```swift
-.package(url: "https://github.com/RussBaz/experimental-reparse-html.git", from: "0.0.16"),
+.package(url: "https://github.com/RussBaz/experimental-reparse-html.git", from: "0.0.17"),
 ```
 
 Then add the `ReparseRuntime` as a dependency to your target like this:

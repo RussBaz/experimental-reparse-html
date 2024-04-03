@@ -1,7 +1,9 @@
-<r-require name="context" type="[String]" label="superheroes" />
+<r-require name="context" type="SampleController.HeroContext" label="superheroes" />
+
 <r-extend name="base" />
-<r-extend name="body" r-if="context.isEmpty" />
-<r-block r-else-if="context.count < 3">
+<r-extend name="body" r-if="context.heroes.isEmpty" />
+
+<r-block r-else-if="context.heroes.count < 3">
     <r-eval line='print("debug 0")' />
     <r-eval line='print("debug 1")' />
 </r-block>
@@ -12,17 +14,17 @@
     <r-eval line='req.logger.info("Index Debug Message")' />
     <h1>
         Hello
-        <r-include name="components.world" r-if="!context.isEmpty">
+        <r-include name="components.world" r-if="!context.heroes.isEmpty">
             Ultra Heroes!
         </r-include>
         <r-block r-else> World?</r-block>
         <span r-else>_!_</span>
     </h1>
     <ol>
-        <li r-for-every="context" r-with-item r-with-index>
+        <li r-for-every="context.heroes" r-with-item="hero" r-with-index>
             <p class="base">
                 <r-set name="class" value=" rose" append />
-                <r-include name="components.hello-me">\(item)</r-include>
+                <r-include name="components.hello-me">\(hero)</r-include>
             </p>
             <p>Index: \(index)</p>
         </li>
@@ -31,8 +33,8 @@
 
     <p>
         <r-value of="req.url.string" />
-        <r-block r-if="context.isEmpty">empty</r-block>
-        <r-value of="context.count" r-else />
+        <r-block r-if="context.heroes.isEmpty">empty</r-block>
+        <r-value of="context.heroes.count" r-else />
     </p>
     <button
         class="button"
@@ -41,14 +43,14 @@
         data-loading-delay
         data-loading-disable
         hx-vals='{"key": "\(key)"}'
-        disabled='\(context.count < 6 ? "true" : "false" )'
+        disabled='\(context.heroes.count < 6 ? "true" : "false" )'
         onclick="console.log('?')"
         onfocus="console.log('?');
 console.log('This is drastic?');
         console.log('too many');"
         
     >
-        <r-set name="requried" r-if="!context.isEmpty" />
+        <r-set name="requried" r-if="!context.heroes.isEmpty" />
         What's up?
     </button>
 </main>

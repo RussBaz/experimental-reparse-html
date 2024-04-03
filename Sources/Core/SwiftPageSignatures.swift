@@ -173,17 +173,16 @@ extension SwiftPageSignatures.ParameterDef {
     var asDeclaration: String {
         let label = if let label { "\(label) " } else { "" }
         let d = if let defaultValue { " = \(defaultValue)" } else { "" }
-
         return "\(label)\(name): \(type)\(d)"
     }
 
-    func asParameter(outerType: String?) -> String? {
-        guard let outerType, outerType == type else { return nil }
+    func asParameter(outerType _: String?) -> String? {
+//        guard let outerType, outerType == type else { return nil }
 
         if let label {
-            return "\(label): \(name)"
+            "\(label): \(name)"
         } else {
-            return "\(name): \(name)"
+            "\(name): \(name)"
         }
     }
 }

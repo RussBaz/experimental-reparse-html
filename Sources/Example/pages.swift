@@ -1,6 +1,6 @@
 //
 // ------------------------------
-// reparse version: 0.0.15
+// reparse version: 0.0.16
 // ------------------------------
 // This is an auto-generated file
 // ------------------------------
@@ -56,13 +56,15 @@ enum Pages {
 
         enum World {
             // Template: ./Components/world.html
-            static func render(req: Request) -> String {
-                include(req: req).render()
+            static func render(req: Request, superheroes context: ExampleProtocol) -> String {
+                include(req: req, superheroes: context).render()
             }
 
-            static func include(req _: Request) -> SwiftLineStorage {
+            static func include(req _: Request, superheroes context: ExampleProtocol) -> SwiftLineStorage {
                 let lines = SwiftLineStorage()
                 lines.append("""
+
+
                 <span>
                 """)
                 lines.declare(slot: "default") { lines in
@@ -71,7 +73,7 @@ enum Pages {
                     """)
                 }
                 lines.append("""
-                </span>
+                 [context: \(context.example)]</span>
                 """)
 
                 return lines
@@ -163,23 +165,23 @@ enum Pages {
 
     enum Index {
         // Template: ./index.html
-        static func render(req: Request, superheroes context: [String], value: Bool = false) -> String {
+        static func render(req: Request, superheroes context: SampleController.HeroContext, value: Bool = false) -> String {
             include(req: req, superheroes: context, value: value).render()
         }
 
-        static func include(req: Request, superheroes context: [String], value: Bool = false) -> SwiftLineStorage {
+        static func include(req: Request, superheroes context: SampleController.HeroContext, value: Bool = false) -> SwiftLineStorage {
             let lines = SwiftLineStorage()
             var attributes: SwiftAttributeStorage
             var previousUnnamedIfTaken = false
 
             lines.extend(Pages.Base.include(req: req))
-            if context.isEmpty {
+            if context.heroes.isEmpty {
                 lines.extend(Pages.Body.include(req: req, value: value))
                 previousUnnamedIfTaken = true
             } else {
                 previousUnnamedIfTaken = false
             }
-            if !previousUnnamedIfTaken, context.count < 3 {
+            if !previousUnnamedIfTaken, context.heroes.count < 3 {
                 print("debug 0")
                 print("debug 1")
                 previousUnnamedIfTaken = true
@@ -201,8 +203,8 @@ enum Pages {
                     Hello
 
             """)
-            if !context.isEmpty {
-                lines.include(Pages.Components.World.include(req: req)) { lines in
+            if !context.heroes.isEmpty {
+                lines.include(Pages.Components.World.include(req: req, superheroes: context)) { lines in
                     lines.append("""
 
                                 Ultra Heroes!
@@ -229,8 +231,8 @@ enum Pages {
                 <ol>
 
             """)
-            if context.isEmpty { previousUnnamedIfTaken = false }
-            for (index, item) in context.enumerated() {
+            if context.heroes.isEmpty { previousUnnamedIfTaken = false }
+            for (index, hero) in context.heroes.enumerated() {
                 lines.append("""
                 <li>
 
@@ -240,7 +242,7 @@ enum Pages {
                 lines.append("<p\(attributes)>")
                 lines.include(Pages.Components.HelloMe.include(req: req)) { lines in
                     lines.append("""
-                    \(item)
+                    \(hero)
                     """)
                 }
                 lines.append("""
@@ -264,7 +266,7 @@ enum Pages {
 
             """)
             lines.append("\(req.url.string)")
-            if context.isEmpty {
+            if context.heroes.isEmpty {
                 lines.append("""
                 empty
                 """)
@@ -273,7 +275,7 @@ enum Pages {
                 previousUnnamedIfTaken = false
             }
             if !previousUnnamedIfTaken {
-                lines.append("\(context.count)")
+                lines.append("\(context.heroes.count)")
             }
             lines.append("""
 
@@ -281,11 +283,11 @@ enum Pages {
 
             """)
             attributes = SwiftAttributeStorage.from(attributes: ["class": .string("button", wrapper: .double), "disabled": .string("""
-            \(context.count < 6 ? "true" : "false")
+            \(context.heroes.count < 6 ? "true" : "false")
             """, wrapper: .single), "hx-post": .string("/auth/logout?next=/", wrapper: .double), "hx-target": .string("body", wrapper: .double), "hx-vals": .string("""
             {"key": "\(key)"}
             """, wrapper: .single), "onclick": .string("console.log('?')", wrapper: .double), "onfocus": .string("console.log('?'); console.log('This is drastic?');         console.log('too many');", wrapper: .double), "data-loading-delay": .flag, "data-loading-disable": .flag])
-            if !context.isEmpty {
+            if !context.heroes.isEmpty {
                 attributes.replace(key: "requried", with: .flag)
                 previousUnnamedIfTaken = true
             } else {
