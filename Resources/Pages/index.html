@@ -19,12 +19,12 @@
         <span r-else>_!_</span>
     </h1>
     <ol>
-        <li r-for-every="context">
+        <li r-for-every="context" r-with-item r-with-index>
             <p class="base">
                 <r-set name="class" value=" rose" append />
-                <r-include name="components.hello-me"><r-item /></r-include>
+                <r-include name="components.hello-me">\(item)</r-include>
             </p>
-            <p>Index: <r-index /> or +1 = \(index+1)</p>
+            <p>Index: \(index)</p>
         </li>
         <li r-else>No more heroes...</li>
     </ol>

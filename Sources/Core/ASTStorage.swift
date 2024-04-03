@@ -20,7 +20,7 @@ public final class ASTStorage {
                 self
             case let .conditional(_, _, _, contents):
                 contents.getCurrentBranch() ?? self
-            case let .loop(_, _, contents):
+            case let .loop(_, _, _, _, contents):
                 contents.getCurrentBranch() ?? self
             case .modifiers:
                 self
@@ -29,10 +29,6 @@ public final class ASTStorage {
             case .value:
                 self
             case .assignment:
-                self
-            case .index:
-                self
-            case .item:
                 self
             case .endOfBranch:
                 nil

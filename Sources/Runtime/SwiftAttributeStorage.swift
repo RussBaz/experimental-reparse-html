@@ -132,14 +132,17 @@ extension SwiftAttributeStorage: CustomStringConvertible {
 }
 
 public extension SwiftAttributeStorage.AttributeValue {
-    var text: String {
+    var textValue: String? {
         switch self {
         case .flag:
-            // Not a standard interpretation of an empty string
-            "true"
-        case let .string(string, _):
-            string
+            nil
+        case let .string(value, _):
+            value
         }
+    }
+
+    var text: String {
+        textValue ?? "true"
     }
 
     var codeString: String {

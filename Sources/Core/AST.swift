@@ -7,14 +7,12 @@ public indirect enum AST {
     case include(name: String, contents: ASTStorage)
     case extend(name: String, condition: EmbeddedCondition?)
     case conditional(name: String?, check: String, type: ConditionType, contents: ASTStorage)
-    case loop(forEvery: String, name: String?, contents: ASTStorage)
+    case loop(forEvery: String, name: String?, itemName: String, indexName: String, contents: ASTStorage)
     case modifiers(applying: [AttributeModifier], tag: TagType)
     case requirement(name: String, type: String, label: String?, value: String?, mutable: Bool)
     case eval(line: String)
     case value(of: String, defaultValue: String?)
     case assignment(name: String, line: String)
-    case index
-    case item
     case endOfBranch
     case noop
 

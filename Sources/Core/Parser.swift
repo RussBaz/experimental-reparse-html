@@ -82,6 +82,8 @@ extension Parser {
         let elseLine: Bool
         let tagLine: String?
         let forLine: String?
+        let forItemNameLine: String?
+        let forIndexNameLine: String?
         let addToSlotLine: String?
         let replaceSlotLine: String?
 
@@ -91,6 +93,8 @@ extension Parser {
             var elseLine = false
             var tagLine: String?
             var forLine: String?
+            var forItemNameLine: String?
+            var forIndexNameLine: String?
             var addToSlotLine: String?
             var replaceSlotLine: String?
 
@@ -131,6 +135,14 @@ extension Parser {
                 forLine = v.text
             }
 
+            if let v = attributes.remove("r-with-item") {
+                forItemNameLine = v.textValue ?? "item"
+            }
+
+            if let v = attributes.remove("r-with-index") {
+                forIndexNameLine = v.textValue ?? "index"
+            }
+
             if let v = attributes.remove("r-add-to-slot") {
                 addToSlotLine = v.text
             }
@@ -141,7 +153,7 @@ extension Parser {
 
             guard ifLine != nil || ifElseLine != nil || elseLine || tagLine != nil || forLine != nil || addToSlotLine != nil || replaceSlotLine != nil else { return nil }
 
-            return .init(ifLine: ifLine, ifElseLine: ifElseLine, elseLine: elseLine, tagLine: tagLine, forLine: forLine, addToSlotLine: addToSlotLine, replaceSlotLine: replaceSlotLine)
+            return .init(ifLine: ifLine, ifElseLine: ifElseLine, elseLine: elseLine, tagLine: tagLine, forLine: forLine, forItemNameLine: forItemNameLine, forIndexNameLine: forIndexNameLine, addToSlotLine: addToSlotLine, replaceSlotLine: replaceSlotLine)
         }
     }
 }
@@ -232,10 +244,6 @@ extension Parser {
             openSlotTag(tag, at: depth)
         case "r-block":
             openBlockTag(tag, at: depth)
-        case "r-index":
-            openIndexTag(tag, at: depth)
-        case "r-item":
-            openItemTag(tag, at: depth)
         default:
             openConstantTag(tag, at: depth)
         }
@@ -284,10 +292,6 @@ extension Parser {
             branch.closeBranch()
         case "r-block":
             ()
-        case "r-index":
-            ()
-        case "r-item":
-            ()
         default:
             branch.append(constant: .tag(value: .closingTag(name: tag.name)))
         }
@@ -310,9 +314,11 @@ extension Parser {
     func isLoop(_ attrs: ControlAttrs) -> AST? {
         switch (attrs.forLine, attrs.tagLine) {
         case let (.some(line), tag):
-            .loop(forEvery: line, name: tag, contents: ASTStorage())
+            let itemName = attrs.forItemNameLine ?? "_"
+            let indexName = attrs.forIndexNameLine ?? "_"
+            return .loop(forEvery: line, name: tag, itemName: itemName, indexName: indexName, contents: ASTStorage())
         case (.none, _):
-            nil
+            return nil
         }
     }
 
@@ -594,20 +600,6 @@ extension Parser {
     func openBlockTag(_ tag: AST.TagType, at depth: Int) {
         guard let _ = ast.getCurrentBranch() else { return }
         guard tag.isOpening else { ignoringUntilDepth = depth; return }
-    }
-
-    func openIndexTag(_ tag: AST.TagType, at depth: Int) {
-        guard let branch = ast.getCurrentBranch() else { return }
-        guard tag.isVoid else { ignoringUntilDepth = depth; return }
-
-        branch.append(node: .index)
-    }
-
-    func openItemTag(_ tag: AST.TagType, at depth: Int) {
-        guard let branch = ast.getCurrentBranch() else { return }
-        guard tag.isVoid else { ignoringUntilDepth = depth; return }
-
-        branch.append(node: .item)
     }
 
     func openConstantTag(_ tag: AST.TagType, at _: Int) {

@@ -250,7 +250,7 @@ public final class SwiftCodeGenerator {
                     ]
                 }
             }
-        case let .loop(forEvery, name, contents):
+        case let .loop(forEvery, name, itemName, indexName, contents):
             guard !contents.isEmpty else { return }
 
             let name = name ?? "previousUnnamedIfTaken"
@@ -262,7 +262,17 @@ public final class SwiftCodeGenerator {
 
                 return ["if \(forEvery).isEmpty { \(name) = false }"]
             }
-            properties.append("for (index, item) in \(forEvery).enumerated() {", at: indentation)
+
+            switch (indexName, itemName) {
+            case ("", ""), ("", "_"), ("_", ""), ("_", "_"):
+                properties.append("for _ in \(forEvery) {", at: indentation)
+            case ("", itemName), ("_", itemName):
+                properties.append("for \(itemName) in \(forEvery) {", at: indentation)
+            case (indexName, ""), (indexName, "_"):
+                properties.append("for (\(indexName), _) in \(forEvery).enumerated() {", at: indentation)
+            default:
+                properties.append("for (\(indexName), \(itemName)) in \(forEvery).enumerated() {", at: indentation)
+            }
             innerGenerator.generateBody(at: indentation + 1)
             properties.append(at: indentation + 1) {
                 guard self.properties.isRead(condition: name) else { return [] }
@@ -430,10 +440,6 @@ public final class SwiftCodeGenerator {
             }
         case let .assignment(name, line):
             properties.append("let \(name) = \(line)", at: indentation)
-        case .index:
-            properties.append("lines.append(\"\\(index)\")", at: indentation)
-        case .item:
-            properties.append("lines.append(\"\\(item)\")", at: indentation)
         case .endOfBranch:
             ()
         case .noop:

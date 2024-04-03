@@ -1,6 +1,6 @@
 //
 // ------------------------------
-// reparse version: 0.0.13
+// reparse version: 0.0.15
 // ------------------------------
 // This is an auto-generated file
 // ------------------------------
@@ -239,16 +239,14 @@ enum Pages {
                 attributes.append(to: "class", value: .string(" rose", wrapper: .double))
                 lines.append("<p\(attributes)>")
                 lines.include(Pages.Components.HelloMe.include(req: req)) { lines in
-                    lines.append("\(item)")
+                    lines.append("""
+                    \(item)
+                    """)
                 }
                 lines.append("""
 
                             </p>
-                            <p>Index: 
-                """)
-                lines.append("\(index)")
-                lines.append("""
-                 or +1 = \(index + 1)</p>
+                            <p>Index: \(index)</p>
                         </li>
                 """)
                 previousUnnamedIfTaken = true
