@@ -4,7 +4,7 @@ public indirect enum AST {
     case constant(contents: Contents)
     case slotDeclaration(name: String, defaults: ASTStorage)
     case slotCommand(type: SlotCommandType, contents: ASTStorage)
-    case include(name: String, contents: ASTStorage)
+    case include(name: String, arguments: [ArgumentOverride], contents: ASTStorage)
     case extend(name: String, condition: EmbeddedCondition?)
     case conditional(name: String?, check: String, type: ConditionType, contents: ASTStorage)
     case loop(forEvery: String, name: String?, itemName: String, indexName: String, contents: ASTStorage)
@@ -50,6 +50,11 @@ public indirect enum AST {
         let type: ConditionType
         let check: String
         let name: String?
+    }
+
+    public struct ArgumentOverride {
+        let name: String
+        let value: String
     }
 
     public class Contents {
@@ -224,6 +229,7 @@ extension AST.Contents: CustomStringConvertible {
 }
 
 extension AST: Equatable {}
+extension AST.ArgumentOverride: Equatable {}
 extension AST.TagType: Equatable {}
 extension AST.Content: Equatable {}
 extension AST.Contents: Equatable {

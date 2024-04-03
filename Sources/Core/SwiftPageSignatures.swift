@@ -30,15 +30,20 @@ public final class SwiftPageSignatures {
         parameters(of: name).map(\.asDeclaration).joined(separator: ", ")
     }
 
-    func parameters(of name: String, in template: String) -> String {
+    func parameters(of name: String, in template: String, override arguments: [AST.ArgumentOverride] = []) -> String {
         let innerParams = parameters(of: name)
         let outerParams = parameters(of: template)
 
         var result: [String] = []
 
         for param in innerParams {
-            let outer = outerParams.first(where: { $0.name == param.name })
-            param.asParameter(outerType: outer?.type).map { result.append($0) }
+            let name = param.label ?? param.name
+
+            if let argument = arguments.first(where: { $0.name == name }) {
+                result.append("\(argument.name): \(argument.value)")
+            } else if let outer = outerParams.first(where: { $0.name == param.name }) {
+                param.asParameter(outerType: outer.type).map { result.append($0) }
+            }
         }
 
         return result.joined(separator: ", ")
@@ -176,13 +181,13 @@ extension SwiftPageSignatures.ParameterDef {
         return "\(label)\(name): \(type)\(d)"
     }
 
-    func asParameter(outerType _: String?) -> String? {
-//        guard let outerType, outerType == type else { return nil }
+    func asParameter(outerType: String) -> String? {
+        guard outerType == type else { return nil }
 
         if let label {
-            "\(label): \(name)"
+            return "\(label): \(name)"
         } else {
-            "\(name): \(name)"
+            return "\(name): \(name)"
         }
     }
 }

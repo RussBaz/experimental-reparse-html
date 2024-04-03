@@ -125,21 +125,21 @@ public final class SwiftCodeGenerator {
                 innerGenerator.generateBody(at: indentation + 1)
                 properties.append("}", at: indentation)
             }
-        case let .include(name, contents):
+        case let .include(name, arguments, contents):
             let name = splitFilenameIntoComponents(name, dropping: properties.fileExtension)
             if !name.isEmpty {
                 let name = name.joined(separator: ".")
                 signatures.append(include: name, to: properties.name)
                 if contents.isEmpty {
                     properties.append(at: indentation) {
-                        let signature = self.signatures.parameters(of: name, in: self.properties.name)
+                        let signature = self.signatures.parameters(of: name, in: self.properties.name, override: arguments)
                         return ["lines.include(\(self.properties.enumName).\(name).include(\(signature)))"]
                     }
                 } else {
                     let innerGenerator = SwiftCodeGenerator(ast: contents, signatures: signatures, page: properties)
 
                     properties.append(at: indentation) {
-                        let signature = self.signatures.parameters(of: name, in: self.properties.name)
+                        let signature = self.signatures.parameters(of: name, in: self.properties.name, override: arguments)
                         return ["lines.include(\(self.properties.enumName).\(name).include(\(signature))) { lines in"]
                     }
                     innerGenerator.generateBody(at: indentation + 1)

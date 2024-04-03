@@ -14,7 +14,7 @@ public final class ASTStorage {
                 defaults.getCurrentBranch() ?? self
             case let .slotCommand(_, contents):
                 contents.getCurrentBranch() ?? self
-            case let .include(_, contents):
+            case let .include(_, _, contents):
                 contents.getCurrentBranch() ?? self
             case .extend:
                 self

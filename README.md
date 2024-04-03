@@ -49,7 +49,7 @@ Here is an example of the `Reparse` syntax as used in the bundled `Example` proj
 If you would like to use it in your own project, firstly, add it to your package dependencies like this:
 
 ```swift
-.package(url: "https://github.com/RussBaz/experimental-reparse-html.git", from: "0.0.17"),
+.package(url: "https://github.com/RussBaz/experimental-reparse-html.git", from: "0.0.18"),
 ```
 
 Then add the `ReparseRuntime` as a dependency to your target like this:

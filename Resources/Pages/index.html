@@ -14,7 +14,7 @@
     <r-eval line='req.logger.info("Index Debug Message")' />
     <h1>
         Hello
-        <r-include name="components.world" r-if="!context.heroes.isEmpty">
+        <r-include name="components.world" :superheroes="context" r-if="!context.heroes.isEmpty">
             Ultra Heroes!
         </r-include>
         <r-block r-else> World?</r-block>

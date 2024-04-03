@@ -340,12 +340,21 @@ extension Parser {
         guard let attributes = tag.attributes else { return }
         guard let name = attributes.find("name") else { return }
 
+        let argumentOverrides = attributes
+            .findAll { key, value in
+                key.starts(with: ":") && key.count > 1 && value.textValue != nil
+            }
+            .map {
+                AST.ArgumentOverride(name: String($0.0.dropFirst()), value: $0.1.text)
+            }
+
         let storage = ASTStorage()
+
         if tag.isVoid {
             storage.append(node: .endOfBranch)
         }
 
-        branch.append(node: .include(name: name, contents: storage))
+        branch.append(node: .include(name: name, arguments: argumentOverrides, contents: storage))
     }
 
     func openExtendTag(_ tag: AST.TagType, at depth: Int) {

@@ -61,6 +61,18 @@ public final class SwiftAttributeStorage {
         attributes[name]?.text
     }
 
+    public func findAll(where using: @escaping (_ value: (String, AttributeValue)) -> Bool) -> [(String, AttributeValue)] {
+        var result: [(String, AttributeValue)] = []
+
+        for attribute in attributes {
+            if using(attribute) {
+                result.append((attribute.key, attribute.value))
+            }
+        }
+
+        return result
+    }
+
     public subscript(name: String) -> AttributeValue? {
         get {
             attributes[name]
