@@ -24,7 +24,7 @@
         <li r-for-every="context.heroes" r-with-item="hero" r-with-index>
             <p class="base">
                 <r-set name="class" value=" rose" append />
-                <r-include name="components.hello-me">\(hero)</r-include>
+                <r-include name="components.hello-me" :name='"very sad"'>\(hero)</r-include>
             </p>
             <p>Index: \(index)</p>
         </li>

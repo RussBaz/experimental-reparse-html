@@ -414,8 +414,9 @@ extension Parser {
         let label = attributes.find("label")
         let defaultValue = attributes.find("default")
         let mutable = attributes.find("mutable") != nil
+        let localOnly = attributes.has("local-only")
 
-        ast.append(node: .requirement(name: name, type: type, label: label, value: defaultValue, mutable: mutable))
+        ast.append(node: .requirement(name: name, type: type, label: label, value: defaultValue, mutable: mutable, localOnly: localOnly))
     }
 
     func openSetTag(_ tag: AST.TagType, at depth: Int) {

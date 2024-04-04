@@ -5,6 +5,7 @@ public final class SwiftPageSignatures {
         let label: String?
         let defaultValue: String?
         let canBeOverriden: Bool
+        let localOnly: Bool
     }
 
     public struct PageSignature {
@@ -157,7 +158,7 @@ extension SwiftPageSignatures {
                     guard let cached = resolved[i] else { continue }
 
                     for c in cached {
-                        if !buffer.contains(where: { $0.name == c.name }) {
+                        if !c.localOnly, !buffer.contains(where: { $0.name == c.name }) {
                             buffer.append(c)
                         }
                     }
@@ -196,6 +197,8 @@ extension SwiftPageSignatures.ParameterDef: Equatable {}
 extension SwiftPageSignatures.ParameterDef: LosslessStringConvertible {
     public init?(_ description: String) {
         let checkedDescription: String
+
+        localOnly = false
 
         if description.starts(with: "?") {
             canBeOverriden = true

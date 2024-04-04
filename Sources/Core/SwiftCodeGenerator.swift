@@ -418,8 +418,8 @@ public final class SwiftCodeGenerator {
             case .closingTag:
                 properties.append("// Error: Impossible tag type", at: indentation)
             }
-        case let .requirement(name, type, label, value, mutable):
-            signatures.append(parameter: .init(type: type, name: name, label: label, defaultValue: value, canBeOverriden: false), to: properties.name)
+        case let .requirement(name, type, label, value, mutable, localOnly):
+            signatures.append(parameter: .init(type: type, name: name, label: label, defaultValue: value, canBeOverriden: false, localOnly: localOnly), to: properties.name)
 
             if mutable {
                 properties.appendMutable(name: name)

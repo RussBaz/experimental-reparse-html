@@ -35,13 +35,15 @@ enum Pages {
         // Own pages
         enum HelloMe {
             // Template: ./Components/hello-me.html
-            static func render(req: Request) -> String {
-                include(req: req).render()
+            static func render(req: Request, name: String = "no-name") -> String {
+                include(req: req, name: name).render()
             }
 
-            static func include(req _: Request) -> SwiftLineStorage {
+            static func include(req _: Request, name: String = "no-name") -> SwiftLineStorage {
                 let lines = SwiftLineStorage()
                 lines.append("""
+
+
                 Hello, 
                 """)
                 lines.declare(slot: "default") { lines in
@@ -49,6 +51,9 @@ enum Pages {
                     Friend!
                     """)
                 }
+                lines.append("""
+                 [extra name: \(name)]
+                """)
 
                 return lines
             }
@@ -240,7 +245,7 @@ enum Pages {
                 attributes = SwiftAttributeStorage.from(attributes: ["class": .string("base", wrapper: .double)])
                 attributes.append(to: "class", value: .string(" rose", wrapper: .double))
                 lines.append("<p\(attributes)>")
-                lines.include(Pages.Components.HelloMe.include(req: req)) { lines in
+                lines.include(Pages.Components.HelloMe.include(req: req, name: "very sad")) { lines in
                     lines.append("""
                     \(hero)
                     """)
