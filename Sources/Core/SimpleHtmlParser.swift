@@ -417,6 +417,7 @@ public final class SimpleHtmlParser {
                 // Do not change the current depth as this is the void tag
                 lastTagIndex = nil
             }
+
         case let .closingTag(name):
             switch dataState {
             case let .script(depth):

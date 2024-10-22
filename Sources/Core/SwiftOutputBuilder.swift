@@ -49,7 +49,7 @@ public final class SwiftOutputBuilder {
         let topLine = """
         //
         // ------------------------------
-        // reparse version: 0.0.18
+        // reparse version: 0.0.19
         // ------------------------------
         // This is an auto-generated file
         // ------------------------------
@@ -135,8 +135,16 @@ public final class SwiftOutputBuilder {
     }
 
     func buildPageEnum(for page: RendererDef, at indentation: Int = 0) -> String {
-        let protocols = if page.properties.protocols.isEmpty { "" } else { ": \(page.properties.protocols.map(\.asDeclaration).joined(separator: ", "))" }
+        let protocols = if page.properties.protocols.isEmpty {
+            ""
+        } else if signatures.isLocal(with: page.properties.name) {
+            ""
+        } else {
+            ": \(page.properties.protocols.map(\.asDeclaration).joined(separator: ", "))"
+        }
         let associatedTypes: String = if page.properties.protocols.isEmpty {
+            ""
+        } else if signatures.isLocal(with: page.properties.name) {
             ""
         } else {
             page.properties.protocols

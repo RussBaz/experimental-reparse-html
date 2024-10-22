@@ -3,7 +3,7 @@ import Foundation
 import ReparseCore
 
 @main
-struct Reparse: ParsableCommand {
+final class Reparse: ParsableCommand {
     @Argument(help: "The target data folder location.", transform: URL.init(fileURLWithPath:))
     var location: URL
 
@@ -31,7 +31,7 @@ struct Reparse: ParsableCommand {
     @Flag(help: "Write the output to the console instead of file")
     var dryRun = false
 
-    mutating func run() throws {
+    func run() throws {
         guard ReparseCore.directoryExists(at: location.path) else {
             throw ValidationError("Folder does not exist at \(location.path)")
         }

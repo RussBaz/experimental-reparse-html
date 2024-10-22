@@ -14,9 +14,9 @@ let package = Package(
         .plugin(name: "ReparsePlugin", targets: ["ReparsePlugin"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.1"),
-        .package(url: "https://github.com/vapor/vapor.git", from: "4.92.5"),
-        .package(url: "https://github.com/vapor/leaf.git", from: "4.3.0"),
+        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.5.0"),
+        .package(url: "https://github.com/vapor/vapor.git", from: "4.106.0"),
+        .package(url: "https://github.com/vapor/leaf.git", from: "4.4.0"),
     ],
     targets: [
         .executableTarget(
@@ -26,21 +26,24 @@ let package = Package(
                 .product(name: "Vapor", package: "vapor"),
                 .target(name: "ReparseRuntime"),
             ],
-            path: "./Sources/Example"
+            path: "./Sources/Example",
+            swiftSettings: swiftSettings
         ),
-        .target(name: "ReparseRuntime", path: "./Sources/Runtime"),
+        .target(name: "ReparseRuntime", path: "./Sources/Runtime", swiftSettings: swiftSettings),
         .target(
             name: "ReparseCore", dependencies: [
                 .target(name: "ReparseRuntime"),
             ],
-            path: "./Sources/Core"
+            path: "./Sources/Core",
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "reparse",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .target(name: "ReparseCore"),
-            ], path: "./Sources/Tool"
+            ], path: "./Sources/Tool",
+            swiftSettings: swiftSettings
         ),
         .plugin(
             name: "ReparsePlugin",
@@ -66,7 +69,31 @@ let package = Package(
             ],
             resources: [
                 .copy("Views"),
-            ]
+            ],
+            swiftSettings: swiftSettings
         ),
     ]
 )
+
+let swiftSettings: [SwiftSetting] = [
+    // Flags to enable Swift 6 compatibility
+    .enableUpcomingFeature("BareSlashRegexLiterals"),
+    .enableUpcomingFeature("ConciseMagicFile"),
+    .enableUpcomingFeature("ForwardTrailingClosures"),
+    .enableUpcomingFeature("ImportObjcForwardDeclarations"),
+    .enableUpcomingFeature("DisableOutwardActorInference"),
+    .enableUpcomingFeature("ExistentialAny"),
+    .enableUpcomingFeature("DeprecateApplicationMain"),
+    .enableUpcomingFeature("GlobalConcurrency"),
+    .enableUpcomingFeature("IsolatedDefaultValues"),
+    .enableExperimentalFeature("StrictConcurrency"),
+    // Flags to warn about the type checking getting too slow
+    .unsafeFlags(
+        [
+            "-Xfrontend",
+            "-warn-long-function-bodies=100",
+            "-Xfrontend",
+            "-warn-long-expression-type-checking=100",
+        ]
+    ),
+]

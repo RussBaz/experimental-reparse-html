@@ -31,6 +31,10 @@ public final class SwiftPageSignatures {
         parameters(of: name).map(\.asDeclaration).joined(separator: ", ")
     }
 
+    func isLocal(with name: String) -> Bool {
+        parameters(of: name).contains { $0.localOnly }
+    }
+
     func parameters(of name: String, in template: String, override arguments: [AST.ArgumentOverride] = []) -> String {
         let innerParams = parameters(of: name)
         let outerParams = parameters(of: template)

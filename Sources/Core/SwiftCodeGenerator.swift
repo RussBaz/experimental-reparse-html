@@ -101,7 +101,6 @@ public final class SwiftCodeGenerator {
             }
 
             properties.append("\"\"\")", at: indentation)
-
         case let .slotDeclaration(name: name, defaults: contents):
             if contents.isEmpty {
                 properties.append("lines.declare(slot: \"\(name)\")", at: indentation)
